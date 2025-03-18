@@ -7,62 +7,105 @@
 
 class InfoScreen {
 private:
-    Arduino_GFX* gfx;
-    TouchPanel* touchPanel;
-    WiFiTCPClient* tcpClient;
-    
-    bool screenInitialized;
-    bool pageBackRequested;
-    
-    String currentDate;
-    String currentTime;
-    String lastDisplayedTime; // To track time changes
-    String weatherTemp;
-    float roomTemp;
-    
-    // Network status
-    bool wifiConnected = false;
-    bool internetConnected = false;
-    bool mqttConnected = false;
-    int wifiStrength = 0; // 0-3 for signal strength
-    
-    // Timing for auto mode switching
-    unsigned long lastActivityTime;
-    unsigned long lastUpdateTime;
-    bool inactivityTimeoutReached;
-    
-    const unsigned long UPDATE_INTERVAL = 60000;    // Update data every minute
-    const unsigned long INACTIVITY_TIMEOUT = 60000; // 1 minute timeout for sleep
-    
-    void drawClock();
-    void drawWeatherAndTemp();
-    void drawWiFiStatus();
-    
-    // Icon drawing helpers
-    void drawWiFiIcon(int x, int y, int size);
-    void drawClockIcon(int x, int y, int size);
-    void drawWeatherIcon(int x, int y, int size);
-    void drawThermometerIcon(int x, int y, int size);
+  Arduino_GFX* gfx;
+  TouchPanel* touchPanel;
+  WiFiTCPClient* tcpClient;
+
+  bool screenInitialized;
+  bool pageBackRequested;
+
+  // Date and time
+  String currentDate;
+  String currentTime;
+  String lastDisplayedTime;
+  String formattedDate;     // Stores formatted date like "MON 17 MAR"
+  String currentDayOfWeek = "---"; // Current day of week (MON, TUE, etc.)
+
+  // Temperature data
+  float indoorTemp = 22.0;  // Default indoor temperature
+  float outdoorTemp = 0.0;  // Default outdoor temperature
+
+  // Previous values to detect changes
+  float lastIndoorTemp = 0.0;
+  float lastOutdoorTemp = 0.0;
+  String lastFormattedDate;
+  String lastFormattedTime;
+
+  // Flags for redrawing specific elements
+  bool indoorTempChanged = false;
+  bool outdoorTempChanged = false;
+  bool dateTimeChanged = false;
+  bool networkStatusChanged = false;
+
+  // Network status
+  bool wifiConnected = false;
+  bool internetConnected = false;
+  bool mqttConnected = false;
+  int wifiStrength = 0; // 0-3 for signal strength
+
+  // Timing for auto mode switching
+  unsigned long lastActivityTime;
+  unsigned long lastUpdateTime;
+  bool inactivityTimeoutReached;
+
+  // Arc configuration
+  const int ARC_THICKNESS = 25;         // Thickness for better visibility
+  const float ARC_START_ANGLE = 120;    // Defined arc start angle (before rotation)
+  const float ARC_LENGTH = 300;         // Defined arc length in degrees
+  const float ARC_END_ANGLE = ARC_START_ANGLE + ARC_LENGTH;  // Calculated end angle
+
+  const unsigned long UPDATE_INTERVAL = 5000;    // Update data every 5 seconds
+  const unsigned long INACTIVITY_TIMEOUT = 60000;  // 1 minute timeout for sleep
+
+  // Animation state for arcs (for synchronized fill animation)
+  float animatedIndoorAngle;
+  float animatedOutdoorAngle;
+  float targetIndoorAngle;
+  float targetOutdoorAngle;
+  float startIndoorAngle;
+  float startOutdoorAngle;
+  unsigned long arcAnimationStartTime;
+  const unsigned long ANIMATION_DURATION = 1000; // Animation duration in ms
+
+  // Screen rendering - called internally from update()
+  void drawDateTime();
+  void drawTemperatureArcs();
+  void drawWiFiStatus();
+
+  // Drawing helpers
+  void drawWiFiIcon(int x, int y, int size);
+  void drawArc(int x, int y, int radius, int thickness, float startAngle, float endAngle, 
+               float value, float minValue, float maxValue, uint16_t startColor, uint16_t endColor, 
+               bool showTemp, const String& label, float fillAngle);
+  uint16_t getTemperatureColor(float temperature);
+  String getMonthName(int month);
+
+  // Network status update - called internally
+  void updateNetworkStatus();
+
+  // Format date as "MON 17 MAR"
+  void formatDate();
 
 public:
-    InfoScreen(Arduino_GFX* graphics, TouchPanel* touch, WiFiTCPClient* client);
-    
-    void updateScreen();
-    void setTCPClient(WiFiTCPClient* client);
-    void updateDateTime(const String& date, const String& time);
-    void updateWeather(const String& temperature);
-    void updateRoomTemperature(float temperature);
-    void updateNetworkStatus();
-    
-    void resetLastActivityTime();
-    bool isInactivityTimeoutReached();
-    
-    bool isPageBackRequested();
-    void resetPageBackRequest();
-    void resetScreen(); // Added method to reset screen initialization flag
-    
-    // Debug method to help diagnose touch issues
-    void printTouchDebugInfo();
+  InfoScreen(Arduino_GFX* graphics, TouchPanel* touch, WiFiTCPClient* client);
+
+  // Main update method - collects data and updates screen
+  void update();
+
+  void setTCPClient(WiFiTCPClient* client);
+  void updateDateTime(const String& date, const String& time);
+  void updateIndoorTemperature(float temperature);
+  void updateOutdoorTemperature(const String& temperature);
+
+  void resetLastActivityTime();
+  bool isInactivityTimeoutReached();
+
+  bool isPageBackRequested();
+  void resetPageBackRequest();
+  void resetScreen(); // Reset screen initialization flag
+
+  // Debug method to help diagnose touch issues
+  void printTouchDebugInfo();
 };
 
 #endif // INFO_SCREEN_H
