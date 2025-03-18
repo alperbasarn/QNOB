@@ -17,16 +17,28 @@
 #define KNOB_TX_PIN 15
 
 int lastActionTime = 0;
-WiFiTCPClient* tcpClient;
-Arduino_DataBus* bus = create_default_Arduino_DataBus();
-Arduino_GFX* gfx = new Arduino_GC9A01(bus, DF_GFX_RST, 0 /* rotation */, false /* IPS */);
-DisplayController* displayController;
+WiFiTCPClient* tcpClient = nullptr;
+Arduino_DataBus* bus = nullptr;
+Arduino_GFX* gfx = nullptr;
+DisplayController* displayController = nullptr;
 EEPROMManager eepromManager;
-KnobController* knobController;
-CommandHandler* commandHandler;
+KnobController* knobController = nullptr;
+CommandHandler* commandHandler = nullptr;
+
+// Store wake reason in RTC memory so it persists during deep sleep
+RTC_DATA_ATTR bool isWakingFromDeepSleep = false;
 
 void goToSleep() {
   Serial.println("Configuring wakeup sources...");
+  
+  // Set flag to indicate next boot will be from deep sleep
+  isWakingFromDeepSleep = true;
+  
+  // Turn off display and other peripherals to save power
+  if (displayController) {
+    displayController->turnDisplayOff();
+  }
+  
   // Configure multiple wakeup sources
   esp_sleep_enable_ext1_wakeup(
     (1ULL << WAKEUP_PIN_LOW) | (1ULL << WAKEUP_PIN_RX),  // Bitmask for both pins
@@ -52,30 +64,85 @@ void goToSleep() {
   esp_deep_sleep_start();
 }
 
+void cleanupResources() {
+  // Free all allocated resources to prevent memory issues
+  if (commandHandler) {
+    delete commandHandler;
+    commandHandler = nullptr;
+  }
+  
+  if (knobController) {
+    delete knobController;
+    knobController = nullptr;
+  }
+  
+  if (displayController) {
+    delete displayController;
+    displayController = nullptr;
+  }
+  
+  if (tcpClient) {
+    delete tcpClient;
+    tcpClient = nullptr;
+  }
+  
+  if (gfx) {
+    delete gfx;
+    gfx = nullptr;
+  }
+  
+  if (bus) {
+    delete bus;
+    bus = nullptr;
+  }
+}
+
 void handleSleep() {
-  if (displayController->getHasNewEvent() || knobController->getHasNewMessage() || commandHandler->getHasNewMessage()) {
+  if (displayController && (displayController->getHasNewEvent() || 
+      (knobController && knobController->getHasNewMessage()) || 
+      (commandHandler && commandHandler->getHasNewMessage()))) {
     lastActionTime = millis();
   }
-  if (millis() - lastActionTime > 300000) {  // Check for inactivity (5 miniutes)
+  
+  if (millis() - lastActionTime > 30000) {  // Check for inactivity (30 seconds)
     goToSleep();
   }
 }
+
 void setup() {
   // Initialize serial communication
   Serial.begin(115200);
-  Serial.println("\n\n----- Starting device initialization -----");
-
-  // Initialize display first to show progress
-  Arduino_DataBus* bus = create_default_Arduino_DataBus();
-  gfx = new Arduino_GC9A01(bus, DF_GFX_RST, 0 /* rotation */, false /* IPS */);
   
+  // Check wake-up cause and handle RTC GPIOs
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  bool isDeepSleepWake = (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) || isWakingFromDeepSleep;
+  
+  if (isDeepSleepWake) {
+    Serial.println("\n\n----- Waking from deep sleep -----");
+    
+    // Deinitialize RTC GPIOs that were configured for wake-up
+    rtc_gpio_deinit(WAKEUP_PIN_LOW);
+    rtc_gpio_deinit(WAKEUP_PIN_RX);
+    
+    // Reset wake flag for next cycle
+    isWakingFromDeepSleep = false;
+  } else {
+    Serial.println("\n\n----- Normal boot initialization -----");
+  }
+  
+  // Clean up any previously allocated resources (important for deep sleep wake)
+  cleanupResources();
+  
+  // Initialize display first to show progress
+  bus = create_default_Arduino_DataBus();
+  gfx = new Arduino_GC9A01(bus, DF_GFX_RST, 0 /* rotation */, false /* IPS */);
+
   // Create display controller but without other components
   displayController = new DisplayController(gfx, 6, 7, 19, 5, nullptr);
-  
+
   // Initialize the display - this will set mode to INITIALIZATION
-  displayController->initScreen(); // This calls a method, not accessing the renamed variable
+  displayController->initScreen();
   displayController->updateInitProgress(5);
-  delay(100); // Allow some time for screen to refresh
 
   // Show progress for EEPROM initialization
   Serial.println("Initializing EEPROM...");
@@ -83,18 +150,16 @@ void setup() {
   eepromManager.begin();
   Serial.println("EEPROM initialized with size: " + String(EEPROM_SIZE) + " bytes");
   displayController->updateInitProgress(20);
-  delay(100);
 
   // Show progress for WiFi initialization
   Serial.println("Creating TCP/WiFi client...");
   displayController->updateInitProgress(30);
   tcpClient = new WiFiTCPClient(&eepromManager);
   Serial.println("WiFi TCP Client created");
-  
+
   // Update display controller with TCP client reference
   displayController->setTCPClient(tcpClient);
   displayController->updateInitProgress(40);
-  delay(100);
 
   // Initialize knob controller
   Serial.println("Initializing knob controller...");
@@ -103,14 +168,12 @@ void setup() {
   knobController->begin(9600);
   Serial.println("Knob Controller initialized");
   displayController->updateInitProgress(60);
-  delay(100);
 
   // Register knob controller with display controller
   Serial.println("Registering knob controller with display...");
   displayController->registerKnobController(knobController);
   Serial.println("Display Controller initialized with Knob Controller");
   displayController->updateInitProgress(70);
-  delay(100);
 
   // Create and initialize command handler
   Serial.println("Setting up command handler...");
@@ -118,67 +181,78 @@ void setup() {
   commandHandler->initialize();
   Serial.println("Command Handler initialized");
   displayController->updateInitProgress(80);
-  delay(100);
 
   // Register knob controller with command handler
   Serial.println("Finalizing controller setup...");
   commandHandler->registerKnobController(knobController);
   displayController->updateInitProgress(85);
-  delay(100);
 
   // Initialize network components
   Serial.println("Starting network components...");
   tcpClient->initialize();
   Serial.println("Network components initialized");
   displayController->updateInitProgress(95);
-  delay(200);
+  
+  // Initialize network components
+  Serial.println("Finalizing connections...");
+  tcpClient->update();
+  Serial.println("Connections done");
+  displayController->updateInitProgress(99);
 
   // All systems initialized
   Serial.println("----- Initialization complete -----");
   displayController->updateInitProgress(100);
-  delay(800); // Show 100% completion for a little longer
+  delay(1000);  // Show 100% completion for a little longer
 
-  // Set to home mode
-  displayController->setMode(HOME);
-  
+  // Set to info mode
+  displayController->setMode(INFO);
+
   // Initialize the last action time
   lastActionTime = millis();
 }
 
 void loop() {
+  // Safety check for null pointers
+  if (!displayController || !knobController || !commandHandler || !tcpClient) {
+    Serial.println("Error: One or more critical components are null. Reinitializing...");
+    // Attempt to clean up and restart
+    cleanupResources();
+    setup();
+    return;
+  }
+
   // Use a staggered update approach to prioritize responsiveness
-  
   // TCP must be checked every cycle for best response time
   tcpClient->update();
-  
+
   // Update one non-network component per cycle (round-robin)
   static uint8_t updateComponent = 0;
-  
+
   switch (updateComponent) {
     case 0:
       // Display updates are less time-critical
       displayController->update();
       break;
-      
+
     case 1:
       // Knob commands should be checked frequently
       knobController->update();
       break;
-      
+
     case 2:
       // Command processing should be checked every few cycles
       commandHandler->update();
       break;
-      
+
     case 3:
       // Sleep handling is least time-critical
       handleSleep();
       break;
   }
-  
+
   // Move to next component for next cycle
   updateComponent = (updateComponent + 1) % 4;
-  
+
   // Small delay to prevent CPU hogging and reduce power consumption
   // This is the only delay in the main loop and it's very short
   delayMicroseconds(10);

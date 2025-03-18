@@ -200,6 +200,7 @@ void SoundController::checkTouchInput() {
   if (touchPanel->isHold()) {
     if (!pageBackRequested) {    // Check if back button press is new
       pageBackRequested = true;  // Set flag if back button is pressed
+      //screenInitialized=false;
     }
   }
 }

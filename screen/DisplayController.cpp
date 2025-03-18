@@ -176,7 +176,6 @@ void DisplayController::turnDisplayOff() {
     Serial.println("Display turned off");
   }
 }
-
 void DisplayController::update() {
   if (knobController) {
     knobController->update();
@@ -205,21 +204,10 @@ void DisplayController::update() {
       
     case INFO:
       if (infoScreen) {
-        // Debug print the data being passed to info screen
-        if (tcpClient) {
-          String date = tcpClient->getCurrentDate();
-          String time = tcpClient->getCurrentTime();
-          String weather = tcpClient->getWeatherTemperature();
-          Serial.println("InfoScreen Update - Date: " + date + ", Time: " + time + ", Weather: " + weather);
-          
-          infoScreen->updateDateTime(date, time);
-          infoScreen->updateWeather(weather);
-          infoScreen->updateRoomTemperature(20.0); // Mock temperature value
-        }
+        // Simply call update - let InfoScreen handle everything internally
+        infoScreen->update();
         
-        infoScreen->updateScreen();
-        
-        // Check if back button was pressed
+        // Only check the necessary flags after the update
         if (infoScreen->isPageBackRequested()) {
           setMode(HOME);
           infoScreen->resetPageBackRequest();

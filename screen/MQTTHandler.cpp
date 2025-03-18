@@ -135,7 +135,7 @@ bool MQTTHandler::connectToMQTTServer() {
 
   // Avoid frequent connection attempts
   unsigned long currentMillis = millis();
-  if (currentMillis - lastMQTTConnectAttempt < MQTT_RECONNECT_DELAY) {
+  if ((currentMillis - lastMQTTConnectAttempt < MQTT_RECONNECT_DELAY) && initialized) {
     return false;
   }
   lastMQTTConnectAttempt = currentMillis;
@@ -224,6 +224,7 @@ bool MQTTHandler::connectToMQTTServer() {
   mqttClient.subscribe("esp32/sound/control");
   
   Serial.println("📩 Subscribed to MQTT topics");
+  initialized = true;
   return true;
 }
 

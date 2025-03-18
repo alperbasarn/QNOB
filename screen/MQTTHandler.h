@@ -26,7 +26,7 @@ private:
   String mqtt_username;
   String mqtt_password;
   bool useLightConfig = false;         // Whether using light or sound MQTT config
-  
+  bool initialized=false;
   // Operation tracking
   unsigned long lastMQTTSentTime = 0;
   unsigned long lastMQTTConnectAttempt = 0;
