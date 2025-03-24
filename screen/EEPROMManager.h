@@ -39,6 +39,14 @@
 // Device name
 #define DEVICE_NAME_ADDRESS (LIGHT_MQTT_SERVER_PASSWORD_ADDRESS + MAX_PASS_LENGTH)
 
+// Static IP Configuration addresses (new)
+#define STATIC_IP_ENABLED_ADDRESS (DEVICE_NAME_ADDRESS + MAX_DEVICE_NAME_LENGTH)
+#define STATIC_IP_ADDRESS (STATIC_IP_ENABLED_ADDRESS + 1)
+#define STATIC_GATEWAY_ADDRESS (STATIC_IP_ADDRESS + MAX_IP_LENGTH)
+#define STATIC_SUBNET_ADDRESS (STATIC_GATEWAY_ADDRESS + MAX_IP_LENGTH)
+#define STATIC_DNS1_ADDRESS (STATIC_SUBNET_ADDRESS + MAX_IP_LENGTH)
+#define STATIC_DNS2_ADDRESS (STATIC_DNS1_ADDRESS + MAX_IP_LENGTH)
+
 struct WifiCredential {
   String ssid;
   String password;
@@ -69,6 +77,14 @@ public:
   
   String deviceName;
 
+  // Static IP Configuration (new)
+  bool staticIPEnabled;
+  String staticIP;
+  String staticGateway;
+  String staticSubnet;
+  String staticDNS1;
+  String staticDNS2;
+
   EEPROMManager();
   void begin();
   void saveWiFiCredentials();
@@ -82,11 +98,17 @@ public:
   void saveLightMQTTServer(const String& url, int port, const String& username, const String& password);
   void saveDeviceName(const String& name);
   
+  // Static IP configuration methods (new)
+  void saveStaticIPConfig(bool enabled, const String& ip, const String& gateway, 
+                         const String& subnet, const String& dns1, const String& dns2);
+  void loadStaticIPConfig();
+  
   // Load configurations
   void loadAllConfigurations();
   
   // Get configuration as string for display
   String getConfigurationInfo();
+  String getStaticIPInfo(); // New method to get static IP info
 
 private:
   void writeStringToEEPROM(int address, const String &str, int maxLength);

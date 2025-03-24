@@ -5,6 +5,13 @@
 #include <WiFiClient.h>
 #include "WiFiHandler.h"
 
+// Default values for static IP configuration
+#define DEFAULT_STATIC_IP "192.168.4.1"
+#define DEFAULT_GATEWAY "192.168.4.1"
+#define DEFAULT_SUBNET "255.255.255.0"
+#define DEFAULT_DNS1 "8.8.8.8"
+#define DEFAULT_DNS2 "8.8.4.4"
+
 class TCPHandler {
 private:
   WiFiHandler* wifiHandler;            // Reference to WiFi handler
@@ -19,6 +26,14 @@ private:
   uint16_t soundServerPort;
   String lightServerIP;
   uint16_t lightServerPort;
+  
+  // Static IP configuration
+  bool useStaticIP = false;            // Flag to enable/disable static IP
+  IPAddress staticIP;                  // Static IP address
+  IPAddress gateway;                   // Gateway IP address
+  IPAddress subnetMask;                // Subnet mask
+  IPAddress dns1;                      // Primary DNS server
+  IPAddress dns2;                      // Secondary DNS server
   
 public:
   TCPHandler(WiFiHandler* wifiHandler);
@@ -43,6 +58,21 @@ public:
   // Configuration methods
   void setServerInfo(const String& soundIP, uint16_t soundPort, 
                     const String& lightIP, uint16_t lightPort);
+  
+  // Static IP methods
+  void setStaticIP(bool enable, const IPAddress& ip, const IPAddress& gw, 
+                  const IPAddress& subnet, const IPAddress& dns1 = IPAddress(8, 8, 8, 8), 
+                  const IPAddress& dns2 = IPAddress(8, 8, 4, 4));
+  void setStaticIPFromStrings(bool enable, const String& ip, const String& gw, 
+                             const String& subnet, const String& dns1 = "8.8.8.8", 
+                             const String& dns2 = "8.8.4.4");
+  bool isUsingStaticIP() const { return useStaticIP; }
+  IPAddress getServerIP() const;      // Get current server IP
+  String getStaticIPConfig() const;   // Get static IP configuration as string
+  
+  // Apply configuration from EEPROMManager
+  void applyEEPROMConfig(bool enabled, const String& ip, const String& gateway, 
+                        const String& subnet, const String& dns1, const String& dns2);
   
   // Main update method
   void update();                       // Handle periodic TCP tasks

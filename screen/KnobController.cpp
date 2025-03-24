@@ -16,8 +16,7 @@ void KnobController::askSetpoint() {
 }
 
 void KnobController::update() {
-  hasNewMessage = false;
-  
+  hasNewMessage = false;  
   while (softSerial.available()) {
     hasNewMessage = true;
     commandFromKnob = "";

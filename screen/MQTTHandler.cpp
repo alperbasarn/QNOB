@@ -117,22 +117,14 @@ void MQTTHandler::initializeMQTT(bool useLightConfig) {
   
   Serial.println("MQTT client initialized successfully");
   
-  // Only try to connect immediately if we have internet
-  if (wifiHandler->isInternetAvailable()) {
-    Serial.println("Internet available, attempting MQTT connection");
-    connectToMQTTServer();
-  } else {
-    Serial.println("No internet connectivity. MQTT connection will be attempted when internet is available.");
-  }
 }
 
 bool MQTTHandler::connectToMQTTServer() {
-  // Skip MQTT connection if no internet connectivity
-  if (!wifiHandler->isInternetAvailable()) {
-    Serial.println("⚠️ No internet connectivity. Skipping MQTT connection.");
+  if(connecting){
+    Serial.println("Already trying to connect to MQTT server!");
     return false;
   }
-
+  connecting = true;
   // Avoid frequent connection attempts
   unsigned long currentMillis = millis();
   if ((currentMillis - lastMQTTConnectAttempt < MQTT_RECONNECT_DELAY) && initialized) {
@@ -149,6 +141,7 @@ bool MQTTHandler::connectToMQTTServer() {
   // Validate MQTT configuration
   if (mqtt_broker.isEmpty()) {
     Serial.println("⚠️ MQTT Broker URL is not configured. Skipping connection.");
+    connecting = false;
     return false;
   }
 
@@ -207,15 +200,17 @@ bool MQTTHandler::connectToMQTTServer() {
       Serial.print("\n⚠️ Failed to connect to MQTT Broker, state: ");
       Serial.println(state);
       logMQTTState(state);
+      connecting = false;
     } else {
       Serial.println("\n⚠️ Internet connectivity lost during MQTT connection attempt.");
+      connecting = false;
     }
     return false;
   }
 
   // Connection succeeded
   Serial.println("\n✅ Successfully connected to MQTT Broker!");
-  
+  connecting = false;
   // Subscribe to topics
   mqttClient.subscribe("ledRing/modeControl");
   mqttClient.subscribe("esp32/ledRing/configure");

@@ -6,6 +6,14 @@ TCPHandler::TCPHandler(WiFiHandler* wifiHdlr)
   
   soundServerIP = "";
   lightServerIP = "";
+  
+  // Initialize default static IP configuration
+  useStaticIP = false;
+  staticIP = IPAddress().fromString(DEFAULT_STATIC_IP);
+  gateway = IPAddress().fromString(DEFAULT_GATEWAY);
+  subnetMask = IPAddress().fromString(DEFAULT_SUBNET);
+  dns1 = IPAddress().fromString(DEFAULT_DNS1);
+  dns2 = IPAddress().fromString(DEFAULT_DNS2);
 }
 
 TCPHandler::~TCPHandler() {
@@ -24,11 +32,28 @@ void TCPHandler::startTCPServer(int port) {
     tcpServer = nullptr;
   }
   
+  // If static IP is enabled, apply configuration to WiFi
+  if (useStaticIP) {
+    if (wifiHandler->isAPModeActive()) {
+      // For AP mode, set the softAP IP
+      bool configResult = WiFi.softAPConfig(staticIP, gateway, subnetMask);
+      Serial.println("Configuring AP with static IP: " + staticIP.toString() + 
+                   ", Result: " + String(configResult ? "Success" : "Failure"));
+    } else if (!wifiHandler->isWiFiConnected()) {
+      // For station mode, apply the static IP configuration
+      Serial.println("Setting static IP for station mode: " + staticIP.toString());
+      bool configResult = WiFi.config(staticIP, gateway, subnetMask, dns1, dns2);
+      Serial.println("Static IP configuration result: " + String(configResult ? "Success" : "Failure"));
+    }
+  }
+  
   // Create and start a new server
   tcpServer = new WiFiServer(port);
   tcpServer->begin();
   
-  Serial.println("TCP server started on port " + String(port));
+  // Log server start with the IP
+  IPAddress serverIP = getServerIP();
+  Serial.println("TCP server started on " + serverIP.toString() + ":" + String(port));
 }
 
 void TCPHandler::handleTCPServer() {
@@ -51,11 +76,10 @@ void TCPHandler::handleTCPServer() {
     // Send welcome message
     tcpServerClient.println("ESP32 Configuration Server");
     tcpServerClient.println("Type 'help' for available commands");
-    if (wifiHandler->isAPModeActive()) {
-      tcpServerClient.println("IP: " + WiFi.softAPIP().toString());
-    } else if (wifiHandler->isWiFiConnected()) {
-      tcpServerClient.println("IP: " + WiFi.localIP().toString());
-    }
+    
+    // Send current IP address
+    IPAddress currentIP = getServerIP();
+    tcpServerClient.println("IP: " + currentIP.toString());
   }
 
   // Only check for data if client exists and is connected
@@ -185,7 +209,86 @@ void TCPHandler::setServerInfo(const String& soundIP, uint16_t soundPort,
   Serial.println("  Light Server: " + lightIP + ":" + String(lightPort));
 }
 
-// Replace the update() method in TCPHandler.cpp with this optimized version
+// Set static IP configuration
+void TCPHandler::setStaticIP(bool enable, const IPAddress& ip, const IPAddress& gw, 
+                           const IPAddress& subnet, const IPAddress& dns1, const IPAddress& dns2) {
+  useStaticIP = enable;
+  staticIP = ip;
+  gateway = gw;
+  subnetMask = subnet;
+  this->dns1 = dns1;
+  this->dns2 = dns2;
+  
+  Serial.println("Static IP configuration " + String(enable ? "enabled" : "disabled") + ":");
+  Serial.println("  IP: " + ip.toString());
+  Serial.println("  Gateway: " + gw.toString());
+  Serial.println("  Subnet: " + subnet.toString());
+  Serial.println("  DNS1: " + dns1.toString());
+  Serial.println("  DNS2: " + dns2.toString());
+}
+
+// Set static IP configuration from strings
+void TCPHandler::setStaticIPFromStrings(bool enable, const String& ip, const String& gw, 
+                                      const String& subnet, const String& dns1, const String& dns2) {
+  IPAddress ipAddr, gwAddr, subnetAddr, dns1Addr, dns2Addr;
+  
+  // Convert strings to IPAddress objects
+  bool validIP = ipAddr.fromString(ip) && 
+                gwAddr.fromString(gw) && 
+                subnetAddr.fromString(subnet) && 
+                dns1Addr.fromString(dns1) && 
+                dns2Addr.fromString(dns2);
+  
+  if (!validIP) {
+    Serial.println("Error: Invalid IP address format");
+    return;
+  }
+  
+  // Set the configuration
+  setStaticIP(enable, ipAddr, gwAddr, subnetAddr, dns1Addr, dns2Addr);
+}
+
+// Apply configuration from EEPROMManager
+void TCPHandler::applyEEPROMConfig(bool enabled, const String& ip, const String& gateway, 
+                                 const String& subnet, const String& dns1, const String& dns2) {
+  // Apply the static IP configuration
+  setStaticIPFromStrings(enabled, ip, gateway, subnet, dns1, dns2);
+}
+
+// Get current server IP
+IPAddress TCPHandler::getServerIP() const {
+  // If static IP is enabled, return the configured IP
+  if (useStaticIP) {
+    return staticIP;
+  }
+  
+  // Otherwise get the IP from WiFi
+  if (wifiHandler) {
+    if (wifiHandler->isWiFiConnected()) {
+      return WiFi.localIP();
+    } else if (wifiHandler->isAPModeActive()) {
+      return WiFi.softAPIP();
+    }
+  }
+  
+  // If all fails, return default
+  return IPAddress().fromString(DEFAULT_STATIC_IP);
+}
+
+// Get static IP configuration as string
+String TCPHandler::getStaticIPConfig() const {
+  String config = "Static IP Configuration:\n";
+  config += "  Enabled: " + String(useStaticIP ? "Yes" : "No") + "\n";
+  config += "  IP: " + staticIP.toString() + "\n";
+  config += "  Gateway: " + gateway.toString() + "\n";
+  config += "  Subnet: " + subnetMask.toString() + "\n";
+  config += "  DNS1: " + dns1.toString() + "\n";
+  config += "  DNS2: " + dns2.toString() + "\n";
+  
+  return config;
+}
+
+// Optimized update method
 void TCPHandler::update() {
   // If there's no server, nothing to do
   if (!tcpServer) return;
@@ -201,14 +304,9 @@ void TCPHandler::update() {
       tcpServerClient.println("ESP32 Configuration Server");
       tcpServerClient.println("Type 'help' for available commands");
       
-      // Only get IP once, don't call WiFi functions multiple times
-      if (wifiHandler->isAPModeActive()) {
-        static IPAddress lastAPIP = WiFi.softAPIP();
-        tcpServerClient.println("IP: " + lastAPIP.toString());
-      } else if (wifiHandler->isWiFiConnected()) {
-        static IPAddress lastIP = WiFi.localIP();
-        tcpServerClient.println("IP: " + lastIP.toString());
-      }
+      // Send current IP address
+      IPAddress currentIP = getServerIP();
+      tcpServerClient.println("IP: " + currentIP.toString());
     }
   } else {
     // Fast check for available data

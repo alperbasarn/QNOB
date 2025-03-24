@@ -24,7 +24,6 @@ private:
   bool screenReleased;
   bool modeControllerInitialized = false;
   bool screenCalibrationInitialized = false;
-  bool deepSleepEnabled;
   
   Mode currentMode;
   unsigned long lastActivityTime;
@@ -44,7 +43,7 @@ private:
   // Activity tracking and auto-switching
   void checkActivityAndAutoSwitch();
   void resetActivityTime();
-  void goToSleep();
+  
 
 public:
   DisplayController(Arduino_GFX* graphics, int sda, int scl, int rst, int irq, WiFiTCPClient* tcpClient);
@@ -65,6 +64,7 @@ public:
   bool getKnobHasNewMessage();
   bool getHasNewEvent();
   void registerKnobController(KnobController* knob);
+  void setDisplayOff();
   
   // Methods for initialization and info screens
   void updateInitProgress(int progress);

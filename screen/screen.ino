@@ -1,259 +1,269 @@
-#include <Arduino_GFX_Library.h>
-#include "DisplayController.h"
-#include "TouchPanel.h"
-#include "WiFiTCPClient.h"
-#include "EEPROMManager.h"
-#include "CommandHandler.h"
-#include "KnobController.h"
-#include <driver/rtc_io.h>
-#include <esp_sleep.h>
+#include "Definitions.h"
 
-// GPIO pins for wakeup
-#define WAKEUP_PIN_LOW GPIO_NUM_5  // Wakeup when touch screen is pressed and interrupt pin pulls down
-#define WAKEUP_PIN_RX GPIO_NUM_16  // Wakeup when motor controller sends a serial command and RX (Pin 15) goes LOW
+// Main Display Task (runs on DISPLAY_CORE continuously)
+void displayTask_func(void* parameter) {
+  Serial.println("[Display Task] Starting main display task on core " + String(xPortGetCoreID()));
+  // Main display task loop
+  for (;;) {
+    // Take mutex when accessing shared resources
+    if (xSemaphoreTake(xMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+      displayController->update();
 
-// Knob communication pins
-#define KNOB_RX_PIN 16
-#define KNOB_TX_PIN 15
+      // Only update knobController if it has been initialized
+      if (knobController) {
+        knobController->update();
+      }
 
-int lastActionTime = 0;
-WiFiTCPClient* tcpClient = nullptr;
-Arduino_DataBus* bus = nullptr;
-Arduino_GFX* gfx = nullptr;
-DisplayController* displayController = nullptr;
-EEPROMManager eepromManager;
-KnobController* knobController = nullptr;
-CommandHandler* commandHandler = nullptr;
+      xSemaphoreGive(xMutex);
+    }
+    // If both initialization tasks are complete, set the mode to INFO
+    if (displayInitialized && networkInitialized && !initComplete) {
+      if (xSemaphoreTake(xMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+        displayController->updateInitProgress(100);
+        delay(200);  // Small delay for user to see 100% completion
+        displayController->setMode(INFO);
+        initComplete = true;
 
-// Store wake reason in RTC memory so it persists during deep sleep
-RTC_DATA_ATTR bool isWakingFromDeepSleep = false;
+        // Enable sleep handler now that initialization is complete
+        if (sleepHandler) {
+          sleepHandler->registerControllers(displayController, commandHandler);
+          sleepHandler->enable();
+        }
 
-void goToSleep() {
-  Serial.println("Configuring wakeup sources...");
-  
-  // Set flag to indicate next boot will be from deep sleep
-  isWakingFromDeepSleep = true;
-  
-  // Turn off display and other peripherals to save power
-  if (displayController) {
-    displayController->turnDisplayOff();
+        xSemaphoreGive(xMutex);
+      }
+    }
+
+    // Small delay to yield to other tasks
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-  
-  // Configure multiple wakeup sources
-  esp_sleep_enable_ext1_wakeup(
-    (1ULL << WAKEUP_PIN_LOW) | (1ULL << WAKEUP_PIN_RX),  // Bitmask for both pins
-    ESP_EXT1_WAKEUP_ALL_LOW                              // Trigger when ALL go LOW
+}
+
+// Main Network Task (runs on NETWORK_CORE continuously)
+void networkTask_func(void* parameter) {
+  Serial.println("[Network Task] Starting main network task on core " + String(xPortGetCoreID()));
+
+  unsigned long lastMemCheckTime = 0;
+
+  // Main network task loop
+  for (;;) {
+    // Only process network-related operations once tcpClient and commandHandler are initialized
+    if (tcpClient && commandHandler) {
+      // Take mutex when accessing shared resources
+      if (xSemaphoreTake(xMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+        tcpClient->update();
+        commandHandler->update();
+
+        // Print memory stats every 30 seconds
+        unsigned long currentMillis = millis();
+        if (currentMillis - lastMemCheckTime > 30000) {
+          printMemoryStats();
+          lastMemCheckTime = currentMillis;
+        }
+
+        xSemaphoreGive(xMutex);
+      }
+
+      // Check for sleep if sleep handler is initialized
+      if (sleepHandler && initComplete) {
+        sleepHandler->checkActivity();
+      }
+    }
+
+    // Small delay to yield to other tasks
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+// Initialize Display Components Task (runs on DISPLAY_CORE)
+void initDisplayTask_func(void* parameter) {
+  Serial.println("[Display Init] Starting display initialization on core " + String(xPortGetCoreID()));
+
+  // Initialize display controller first to show progress
+  displayController = new DisplayController(gfx, 6, 7, 19, 5, nullptr);
+
+  // Initialize the display
+  displayController->initScreen();
+
+  // Start the display task immediately so it can update the screen
+  xTaskCreatePinnedToCore(
+    displayTask_func,      /* Task function */
+    "DisplayTask",         /* Name of task */
+    DISPLAY_STACK_SIZE,    /* Stack size (bytes) */
+    NULL,                  /* Parameter */
+    DISPLAY_TASK_PRIORITY, /* Task priority */
+    &displayTask,          /* Task handle */
+    DISPLAY_CORE           /* Core where the task should run */
   );
 
-  // Configure RTC GPIO for WAKEUP_PIN_LOW
-  rtc_gpio_init(WAKEUP_PIN_LOW);
-  rtc_gpio_set_direction(WAKEUP_PIN_LOW, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_pullup_en(WAKEUP_PIN_LOW);
-  rtc_gpio_pulldown_dis(WAKEUP_PIN_LOW);
+  // Display first progress update
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    displayController->updateInitProgress(10);
+    xSemaphoreGive(xMutex);
+  }
 
-  // Configure RTC GPIO for WAKEUP_PIN_RX
-  rtc_gpio_init(WAKEUP_PIN_RX);
-  rtc_gpio_set_direction(WAKEUP_PIN_RX, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_pullup_en(WAKEUP_PIN_RX);  // Enable pull-up to keep RX idle state HIGH
-  rtc_gpio_pulldown_dis(WAKEUP_PIN_RX);
+  // Wait for EEPROM initialization from the network task
+  Serial.println("[Display Init] Waiting for EEPROM initialization...");
+  xSemaphoreTake(xEEPROMSemaphore, portMAX_DELAY);
 
-  Serial.println("Entering deep sleep...");
-  delay(1000);
+  // Display progress after EEPROM init
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    displayController->updateInitProgress(30);
+    xSemaphoreGive(xMutex);
+  }
 
-  // Enter deep sleep
-  esp_deep_sleep_start();
+  // Initialize knob controller
+  Serial.println("[Display Init] Initializing knob controller...");
+  knobController = new KnobController(KNOB_RX_PIN, KNOB_TX_PIN);
+  knobController->begin(9600);
+  Serial.println("[Display Init] Knob Controller initialized");
+
+  // Update progress
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    displayController->updateInitProgress(50);
+    xSemaphoreGive(xMutex);
+  }
+
+  // Register knob controller with display controller
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    displayController->registerKnobController(knobController);
+    displayController->updateInitProgress(60);
+    xSemaphoreGive(xMutex);
+  }
+  Serial.println("[Display Init] Display Controller initialized with Knob Controller");
+
+  // Wait for TCP client creation from network task
+  Serial.println("[Display Init] Waiting for TCP Client creation...");
+  xSemaphoreTake(xTCPClientSemaphore, portMAX_DELAY);
+
+  Serial.println("[Display Init] Setting up command handler...");
+  commandHandler = new CommandHandler(displayController, &eepromManager, tcpClient);
+  commandHandler->initialize();
+  Serial.println("[Display Init] Command Handler initialized");
+
+  // Update progress
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    displayController->updateInitProgress(70);
+    xSemaphoreGive(xMutex);
+  }
+
+  // Register knob controller with command handler
+  commandHandler->registerKnobController(knobController);
+  Serial.println("[Display Init] Controller setup complete");
+
+  // Update TCP client in display controller
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    displayController->setTCPClient(tcpClient);
+    displayController->updateInitProgress(80);
+    xSemaphoreGive(xMutex);
+  }
+
+  Serial.println("[Display Init] Display initialization complete");
+
+  // Signal display initialization is complete
+  displayInitialized = true;
+
+  // Delete the init task
+  vTaskDelete(NULL);
 }
 
-void cleanupResources() {
-  // Free all allocated resources to prevent memory issues
-  if (commandHandler) {
-    delete commandHandler;
-    commandHandler = nullptr;
-  }
-  
-  if (knobController) {
-    delete knobController;
-    knobController = nullptr;
-  }
-  
-  if (displayController) {
-    delete displayController;
-    displayController = nullptr;
-  }
-  
-  if (tcpClient) {
-    delete tcpClient;
-    tcpClient = nullptr;
-  }
-  
-  if (gfx) {
-    delete gfx;
-    gfx = nullptr;
-  }
-  
-  if (bus) {
-    delete bus;
-    bus = nullptr;
-  }
-}
+// Initialize Network Components Task (runs on NETWORK_CORE)
+void initNetworkTask_func(void* parameter) {
+  Serial.println("[Network Init] Starting network initialization on core " + String(xPortGetCoreID()));
 
-void handleSleep() {
-  if (displayController && (displayController->getHasNewEvent() || 
-      (knobController && knobController->getHasNewMessage()) || 
-      (commandHandler && commandHandler->getHasNewMessage()))) {
-    lastActionTime = millis();
-  }
-  
-  if (millis() - lastActionTime > 30000) {  // Check for inactivity (30 seconds)
-    goToSleep();
-  }
+  // Initialize EEPROM first (needed by both display and network)
+  Serial.println("[Network Init] Initializing EEPROM...");
+  eepromManager.begin();
+  Serial.println("[Network Init] EEPROM initialized with size: " + String(EEPROM_SIZE) + " bytes");
+
+  // Signal EEPROM is initialized - this unblocks the display initialization
+  xSemaphoreGive(xEEPROMSemaphore);
+
+  // Create the network task early
+  xTaskCreatePinnedToCore(
+    networkTask_func,      /* Task function */
+    "NetworkTask",         /* Name of task */
+    NETWORK_STACK_SIZE,    /* Stack size (bytes) */
+    NULL,                  /* Parameter */
+    NETWORK_TASK_PRIORITY, /* Task priority */
+    &networkTask,          /* Task handle */
+    NETWORK_CORE           /* Core where the task should run */
+  );
+
+  // Create WiFi/TCP client
+  Serial.println("[Network Init] Creating TCP/WiFi client...");
+  tcpClient = new WiFiTCPClient(&eepromManager);
+  Serial.println("[Network Init] WiFi TCP Client created");
+
+  // Signal TCP client is created - this unblocks the display initialization
+  xSemaphoreGive(xTCPClientSemaphore);
+
+  // Initialize WiFi and TCP components
+  Serial.println("[Network Init] Starting network components...");
+  tcpClient->initialize();
+  Serial.println("[Network Init] Network components initialized");
+
+  // Signal network initialization is complete (NOT waiting for display)
+  networkInitialized = true;
+
+  Serial.println("[Network Init] Network initialization complete");
+
+  // Delete the init task
+  vTaskDelete(NULL);
 }
 
 void setup() {
   // Initialize serial communication
   Serial.begin(115200);
-  
-  // Check wake-up cause and handle RTC GPIOs
-  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-  bool isDeepSleepWake = (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) || isWakingFromDeepSleep;
-  
-  if (isDeepSleepWake) {
-    Serial.println("\n\n----- Waking from deep sleep -----");
-    
-    // Deinitialize RTC GPIOs that were configured for wake-up
-    rtc_gpio_deinit(WAKEUP_PIN_LOW);
-    rtc_gpio_deinit(WAKEUP_PIN_RX);
-    
-    // Reset wake flag for next cycle
-    isWakingFromDeepSleep = false;
+  Serial.println("\n\n----- Starting device initialization -----");
+
+  // Check PSRAM
+  if (psramFound()) {
+    Serial.println("PSRAM found and initialized");
+    Serial.printf("Total PSRAM: %d bytes\n", ESP.getPsramSize());
+    Serial.printf("Free PSRAM: %d bytes\n", ESP.getFreePsram());
   } else {
-    Serial.println("\n\n----- Normal boot initialization -----");
+    Serial.println("No PSRAM detected");
   }
-  
-  // Clean up any previously allocated resources (important for deep sleep wake)
-  cleanupResources();
-  
-  // Initialize display first to show progress
-  bus = create_default_Arduino_DataBus();
-  gfx = new Arduino_GC9A01(bus, DF_GFX_RST, 0 /* rotation */, false /* IPS */);
 
-  // Create display controller but without other components
-  displayController = new DisplayController(gfx, 6, 7, 19, 5, nullptr);
+  // Create synchronization primitives
+  xMutex = xSemaphoreCreateMutex();
+  xEEPROMSemaphore = xSemaphoreCreateBinary();
+  xTCPClientSemaphore = xSemaphoreCreateBinary();
 
-  // Initialize the display - this will set mode to INITIALIZATION
-  displayController->initScreen();
-  displayController->updateInitProgress(5);
+  // Initialize sleep handler (disabled by default)
+  sleepHandler = SleepHandler::getInstance(&xMutex);
+  sleepHandler->setInactivityTimeout(30000);  // 30 seconds
+  sleepHandler->disable();                    // Explicitly disable at start
 
-  // Show progress for EEPROM initialization
-  Serial.println("Initializing EEPROM...");
-  displayController->updateInitProgress(10);
-  eepromManager.begin();
-  Serial.println("EEPROM initialized with size: " + String(EEPROM_SIZE) + " bytes");
-  displayController->updateInitProgress(20);
+  // Create initialization tasks
+  xTaskCreatePinnedToCore(
+    initDisplayTask_func, /* Task function */
+    "InitDisplayTask",    /* Name of task */
+    DISPLAY_STACK_SIZE,   /* Stack size (bytes) */
+    NULL,                 /* Parameter */
+    INIT_TASK_PRIORITY,   /* Task priority */
+    &initDisplayTask,     /* Task handle */
+    DISPLAY_CORE          /* Core where the task should run */
+  );
 
-  // Show progress for WiFi initialization
-  Serial.println("Creating TCP/WiFi client...");
-  displayController->updateInitProgress(30);
-  tcpClient = new WiFiTCPClient(&eepromManager);
-  Serial.println("WiFi TCP Client created");
+  xTaskCreatePinnedToCore(
+    initNetworkTask_func, /* Task function */
+    "InitNetworkTask",    /* Name of task */
+    NETWORK_STACK_SIZE,   /* Stack size (bytes) */
+    NULL,                 /* Parameter */
+    INIT_TASK_PRIORITY,   /* Task priority */
+    &initNetworkTask,     /* Task handle */
+    NETWORK_CORE          /* Core where the task should run */
+  );
 
-  // Update display controller with TCP client reference
-  displayController->setTCPClient(tcpClient);
-  displayController->updateInitProgress(40);
+  Serial.println("All initialization tasks created successfully!");
 
-  // Initialize knob controller
-  Serial.println("Initializing knob controller...");
-  displayController->updateInitProgress(50);
-  knobController = new KnobController(KNOB_RX_PIN, KNOB_TX_PIN);
-  knobController->begin(9600);
-  Serial.println("Knob Controller initialized");
-  displayController->updateInitProgress(60);
-
-  // Register knob controller with display controller
-  Serial.println("Registering knob controller with display...");
-  displayController->registerKnobController(knobController);
-  Serial.println("Display Controller initialized with Knob Controller");
-  displayController->updateInitProgress(70);
-
-  // Create and initialize command handler
-  Serial.println("Setting up command handler...");
-  commandHandler = new CommandHandler(displayController, &eepromManager, tcpClient);
-  commandHandler->initialize();
-  Serial.println("Command Handler initialized");
-  displayController->updateInitProgress(80);
-
-  // Register knob controller with command handler
-  Serial.println("Finalizing controller setup...");
-  commandHandler->registerKnobController(knobController);
-  displayController->updateInitProgress(85);
-
-  // Initialize network components
-  Serial.println("Starting network components...");
-  tcpClient->initialize();
-  Serial.println("Network components initialized");
-  displayController->updateInitProgress(95);
-  
-  // Initialize network components
-  Serial.println("Finalizing connections...");
-  tcpClient->update();
-  Serial.println("Connections done");
-  displayController->updateInitProgress(99);
-
-  // All systems initialized
-  Serial.println("----- Initialization complete -----");
-  displayController->updateInitProgress(100);
-  delay(1000);  // Show 100% completion for a little longer
-
-  // Set to info mode
-  displayController->setMode(INFO);
-
-  // Initialize the last action time
-  lastActionTime = millis();
+  // Setup is complete - sleep handler will be enabled when initialization is fully completed
+  setupComplete = true;
 }
 
 void loop() {
-  // Safety check for null pointers
-  if (!displayController || !knobController || !commandHandler || !tcpClient) {
-    Serial.println("Error: One or more critical components are null. Reinitializing...");
-    // Attempt to clean up and restart
-    cleanupResources();
-    setup();
-    return;
-  }
-
-  // Use a staggered update approach to prioritize responsiveness
-  // TCP must be checked every cycle for best response time
-  tcpClient->update();
-
-  // Update one non-network component per cycle (round-robin)
-  static uint8_t updateComponent = 0;
-
-  switch (updateComponent) {
-    case 0:
-      // Display updates are less time-critical
-      displayController->update();
-      break;
-
-    case 1:
-      // Knob commands should be checked frequently
-      knobController->update();
-      break;
-
-    case 2:
-      // Command processing should be checked every few cycles
-      commandHandler->update();
-      break;
-
-    case 3:
-      // Sleep handling is least time-critical
-      handleSleep();
-      break;
-  }
-
-  // Move to next component for next cycle
-  updateComponent = (updateComponent + 1) % 4;
-
-  // Small delay to prevent CPU hogging and reduce power consumption
-  // This is the only delay in the main loop and it's very short
-  delayMicroseconds(10);
+  // Empty loop - all work is done in tasks
+  vTaskDelay(0);
 }

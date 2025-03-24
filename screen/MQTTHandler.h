@@ -19,7 +19,7 @@ private:
   
   WiFiClientSecure wifiClient;         // Secure WiFi client for MQTT
   PubSubClient mqttClient;             // MQTT client object
-  
+  bool connecting = false;
   // MQTT Configuration
   String mqtt_broker;
   int mqtt_port;

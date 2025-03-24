@@ -25,6 +25,7 @@ private:
   int releaseTime;       // Time when release detected
   int pressDuration;     // Actual duration of press event
   int holdThreshold;     // Threshold duration to determine hold
+  int pressThreshold;
   int longHoldThreshold;     // Threshold duration to determine hold
   int releaseThreshold;  // Threshold duration to determine release
   int touchX;            // X-coordinate of touch

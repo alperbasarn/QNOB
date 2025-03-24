@@ -1,139 +1,190 @@
 #include "TimeHandler.h"
-#include "InternetHandler.h"
-#include <time.h>
 
-TimeHandler::TimeHandler(InternetHandler* internet, int timeZone)
-  : internetHandler(internet), timeZone(timeZone),
-    timeClient(nullptr), timeUpdated(false), lastNTPSync(0) {
+// Initialize static RTC memory variable
+RTC_DATA_ATTR bool TimeHandler::rtcTimeInitialized = false;
 
-  // DO NOT initialize NTP client in constructor
-  Serial.println("TimeHandler initialized");
+TimeHandler::TimeHandler(int timeZone)
+  : timeZone(timeZone), lastNtpSyncTime(0), lastTimeCheckTime(0) {
+  
+  // Configure timezone and NTP servers
+  configTime(timeZone * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  
+  // Upon wake-up from deep sleep, check if RTC has valid time
+  time_t now = time(nullptr);
+  
+  if (isTimeValid(now) || rtcTimeInitialized) {
+    Serial.println("TimeHandler: Valid time detected in RTC memory");
+    timeInitialized = true;
+    rtcTimeInitialized = true;
+    
+    // Update string representations immediately
+    updateTimeStrings();
+  } else {
+    Serial.println("TimeHandler: RTC time not initialized yet");
+    timeInitialized = false;
+    rtcTimeInitialized = false;
+  }
 }
 
 TimeHandler::~TimeHandler() {
-  if (timeClient) {
-    timeClient->end();
-    delete timeClient;
-  }
+  // Nothing to clean up
 }
 
-String TimeHandler::getWeekdayString(int wday) {
-  // Convert TimeLib weekday (1-7) to our 3-letter format (SUN, MON, etc.)
-  static const char* days[] = { "???", "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" }; // Index 0 is invalid
+bool TimeHandler::isTimeValid(time_t timeValue) const {
+  // Time is valid if it's after Jan 1, 2020
+  return timeValue > VALID_TIME_THRESHOLD;
+}
+
+String TimeHandler::getDayOfWeekString(int wday) {
+  // Convert time.h weekday (0-6, Sunday = 0) to our 3-letter format
+  static const char* days[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
   
-  if (wday >= 1 && wday <= 7) {
+  if (wday >= 0 && wday <= 6) {
     return days[wday];
   } else {
-    return "???";  // Invalid weekday
+    return "---";
   }
 }
 
-bool TimeHandler::updateDateTime() {
-  if (!internetHandler || !internetHandler->isInternetAvailable()) {
-    Serial.println("Cannot update time: no internet connection");
-    return false;
-  }
-
-  // Lazy initialization of NTP client
-  if (!timeClient) {
-    Serial.println("Initializing NTP client");
-    timeClient = new NTPClient(ntpUDP, NTP_SERVER);
-    timeClient->setTimeOffset(timeZone * 3600);  // Convert hours to seconds
-    timeClient->begin();
-  }
-
-  Serial.println("Attempting to update date and time from NTP server...");
-
-  // Force update from NTP server
-  bool ntpUpdateSuccess = timeClient->update();
-
-  if (!ntpUpdateSuccess) {
-    Serial.println("Failed to update time from NTP server");
-    // Retry a few times
-    for (int i = 0; i < 3; i++) {
-      delay(500);
-      if (timeClient->update()) {
-        ntpUpdateSuccess = true;
-        break;
-      }
+bool TimeHandler::syncWithNTP() {
+  Serial.println("TimeHandler: Syncing with NTP server...");
+  
+  // Request time sync
+  sntp_restart();
+  
+  // Wait up to 5 seconds for time to sync
+  unsigned long startAttempt = millis();
+  while (millis() - startAttempt < 5000) {
+    // Get current time
+    time_t now = time(nullptr);
+    
+    // Check if time is valid (greater than Jan 1, 2020)
+    if (isTimeValid(now)) {
+      timeInitialized = true;
+      rtcTimeInitialized = true;  // Store in RTC memory for persistence across deep sleep
+      
+      // Update string representations
+      updateTimeStrings();
+      
+      Serial.println("TimeHandler: NTP sync successful");
+      lastNtpSyncTime = millis();
+      return true;
     }
-
-    if (!ntpUpdateSuccess) {
-      return false;
-    }
+    
+    delay(100);
   }
-
-  // Get current epoch time
-  time_t epochTime = timeClient->getEpochTime();
   
-  // Set the TimeLib time - this starts the internal clock running
-  setTime(epochTime);
-  
-  // Mark time as updated and store sync time
-  timeUpdated = true;
-  lastNTPSync = millis();
-  
-  // Update our string variables from the new time
-  updateTimeVariables();
-  
-  Serial.print("Time updated from NTP: ");
-  Serial.print(currentDate);
-  Serial.print(" ");
-  Serial.print(currentTime);
-  Serial.print(" ");
-  Serial.println(dayOfWeek);
-
-  lastDateTimeUpdate = millis();
-  return true;
+  Serial.println("TimeHandler: NTP sync failed after 5 seconds");
+  return false;
 }
 
-void TimeHandler::updateTimeVariables() {
-  // Format the date as YYYY/MM/DD
-  char dateBuffer[11];
-  sprintf(dateBuffer, "%04d/%02d/%02d", year(), month(), day());
-  currentDate = String(dateBuffer);
-
-  // Format the time as HH:MM
-  char timeBuffer[6];
-  sprintf(timeBuffer, "%02d:%02d", hour(), minute());
-  currentTime = String(timeBuffer);
+time_t TimeHandler::getCurrentEpochTime() {
+  time_t now = time(nullptr);
   
-  // Get day of week using TimeLib's weekday() function
-  dayOfWeek = getWeekdayString(weekday());
+  // Double-check time validity - handles edge case where RTC 
+  // returns invalid time despite being previously initialized
+  if (!isTimeValid(now) && timeInitialized) {
+    Serial.println("WARNING: RTC returned invalid time despite being initialized");
+    timeInitialized = false;  // Reset flag to force a resync
+    rtcTimeInitialized = false;
+  }
+  
+  return now;
 }
 
-String TimeHandler::getCurrentDate() const {
+struct tm TimeHandler::getTimeStruct() {
+  time_t now = getCurrentEpochTime();
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  return timeinfo;
+}
+
+void TimeHandler::updateTimeStrings() {
+  struct tm timeinfo = getTimeStruct();
+  
+  // Only update if we have a valid time
+  if (timeinfo.tm_year > 120) { // Year is years since 1900, so 2020 = 120
+    // Format date as YYYY/MM/DD
+    char dateBuffer[11];
+    sprintf(dateBuffer, "%04d/%02d/%02d", 
+            timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday);
+    currentDate = String(dateBuffer);
+    
+    // Format time as HH:MM
+    char timeBuffer[6];
+    sprintf(timeBuffer, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+    currentTime = String(timeBuffer);
+    
+    // Get day of week
+    dayOfWeek = getDayOfWeekString(timeinfo.tm_wday);
+  }
+}
+
+String TimeHandler::getCurrentDate() {
+  // Only update strings if time is initialized
+  if (timeInitialized) {
+    updateTimeStrings();
+  }
   return currentDate;
 }
 
-String TimeHandler::getCurrentTime() const {
+String TimeHandler::getCurrentTime() {
+  // Only update strings if time is initialized
+  if (timeInitialized) {
+    updateTimeStrings();
+  }
   return currentTime;
 }
 
-String TimeHandler::getDayOfWeek() const {
+String TimeHandler::getDayOfWeek() {
+  // Only update strings if time is initialized
+  if (timeInitialized) {
+    updateTimeStrings();
+  }
   return dayOfWeek;
 }
 
-bool TimeHandler::isTimeValid() const {
-  return timeUpdated;
+int TimeHandler::getCurrentYear() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_year + 1900;
+}
+
+int TimeHandler::getCurrentMonth() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_mon + 1;
+}
+
+int TimeHandler::getCurrentDay() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_mday;
+}
+
+int TimeHandler::getCurrentHour() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_hour;
+}
+
+int TimeHandler::getCurrentMinute() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_min;
+}
+
+int TimeHandler::getCurrentSecond() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_sec;
+}
+
+int TimeHandler::getCurrentWeekday() {
+  struct tm timeinfo = getTimeStruct();
+  return timeinfo.tm_wday;
 }
 
 void TimeHandler::update() {
   unsigned long currentMillis = millis();
   
-  // Check if we need to resync with NTP server (every 5 minutes)
-  if (timeUpdated && (currentMillis - lastNTPSync > NTP_RESYNC_INTERVAL)) {
-    Serial.println("5 minutes passed, resetting timeUpdated to trigger NTP resync");
-    timeUpdated = false;
-  }
-  
-  // If time is not updated or we need to resync, try to update from NTP
-  if (!timeUpdated) {
-    updateDateTime();
-  }
-  // Otherwise, if it's time for a local update, update time variables from TimeLib
-  else if (currentMillis - lastDateTimeUpdate > TIME_UPDATE_INTERVAL) {
-    updateTimeVariables();
-    lastDateTimeUpdate = currentMillis;
+  // Check if it's time to update string representations
+  if (timeInitialized && (currentMillis - lastTimeCheckTime > TIME_CHECK_INTERVAL)) {
+    updateTimeStrings();
+    lastTimeCheckTime = currentMillis;
   }
 }

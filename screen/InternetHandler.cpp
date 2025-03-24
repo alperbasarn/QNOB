@@ -4,18 +4,31 @@
 #include "WeatherHandler.h"
 
 InternetHandler::InternetHandler(WiFiHandler* wifiHandler)
-  : wifiHandler(wifiHandler), internetAvailable(false), lastInternetCheck(0) {
+  : wifiHandler(wifiHandler), internetAvailable(false), 
+    lastInternetCheck(0), lastTimeCheck(0), lastWeatherCheck(0) {
 
-  // Create sub-handlers once WiFiHandler reference is set
-  timeHandler = new TimeHandler(this);
+  // Create TimeHandler (no dependency on InternetHandler)
+  timeHandler = new TimeHandler();
+  
+  // Create WeatherHandler (needs reference to InternetHandler for internet status)
   weatherHandler = new WeatherHandler(this);
 
   Serial.println("InternetHandler initialized");
 }
 
 InternetHandler::~InternetHandler() {
-  delete timeHandler;
-  delete weatherHandler;
+  // Clean up dynamically allocated resources
+  if (timeHandler) {
+    delete timeHandler;
+    timeHandler = nullptr;
+  }
+  
+  if (weatherHandler) {
+    delete weatherHandler;
+    weatherHandler = nullptr;
+  }
+  
+  Serial.println("InternetHandler destroyed");
 }
 
 bool InternetHandler::checkInternetConnectivity() {
@@ -42,14 +55,11 @@ bool InternetHandler::checkInternetConnectivity() {
   bool previousState = internetAvailable;
   internetAvailable = connected;
 
-  // Always log the current state for debugging
-  Serial.print("DEBUG: Internet connectivity check result: ");
-  Serial.println(internetAvailable ? "CONNECTED" : "DISCONNECTED");
-
   // Log change of state
   if (previousState != internetAvailable) {
     if (internetAvailable) {
-      Serial.println("✅ Internet connectivity established");
+      Serial.println("✅ Internet connectivity established. Getting weather data.");
+      weatherHandler->update();
     } else {
       Serial.println("❌ Internet connectivity lost");
     }
@@ -59,15 +69,14 @@ bool InternetHandler::checkInternetConnectivity() {
   return internetAvailable;
 }
 
-// New delegation methods
 bool InternetHandler::updateDateTime() {
   if (!internetAvailable) {
     Serial.println("DEBUG: Cannot update time - No internet connection");
     return false;
   }
 
-  Serial.println("DEBUG: Calling TimeHandler updateDateTime");
-  return timeHandler ? timeHandler->updateDateTime() : false;
+  Serial.println("DEBUG: Calling TimeHandler syncWithNTP");
+  return timeHandler ? timeHandler->syncWithNTP() : false;
 }
 
 bool InternetHandler::updateWeather() {
@@ -86,30 +95,37 @@ void InternetHandler::update() {
   // Check internet connectivity periodically
   if (currentMillis - lastInternetCheck >= INTERNET_CHECK_INTERVAL) {
     checkInternetConnectivity();
-    // Update sub-handlers if we have internet
-    if (internetAvailable) {
-      if (timeHandler) {
-        timeHandler->update();
-      } else {
-        Serial.println("ERROR: timeHandler is NULL");
-      }
-      if (weatherHandler) {
-        if (currentMillis - lastWeatherCheck >= WEATHER_CHECK_INTERVAL) weatherHandler->update();
-      } else {
-        Serial.println("ERROR: weatherHandler is NULL");
+    lastInternetCheck = currentMillis;
+  }
+  
+  // Only perform updates if internet is available
+  if (internetAvailable) {
+    // Update time if we have a valid TimeHandler
+    if (timeHandler) {
+      timeHandler->update();
+    } else {
+      Serial.println("ERROR: timeHandler is NULL");
+    }
+    
+    // Update weather periodically if we have a valid WeatherHandler
+    if (weatherHandler) {
+      if (currentMillis - lastWeatherCheck >= WEATHER_CHECK_INTERVAL) {
+        weatherHandler->update();
+        lastWeatherCheck = currentMillis;
       }
     } else {
-      // Log this periodically but not on every update
-      static unsigned long lastNoInternetLog = 0;
-      if (currentMillis - lastNoInternetLog >= 10000) {  // Log every 10 seconds
-        Serial.println("DEBUG: InternetHandler update - No internet, skipping updates");
-        lastNoInternetLog = currentMillis;
-      }
+      Serial.println("ERROR: weatherHandler is NULL");
+    }
+  } else {
+    // Log this periodically but not on every update
+    static unsigned long lastNoInternetLog = 0;
+    if (currentMillis - lastNoInternetLog >= 10000) {  // Log every 10 seconds
+      Serial.println("DEBUG: InternetHandler update - No internet, skipping updates");
+      lastNoInternetLog = currentMillis;
     }
   }
 }
 
-// Delegation methods for backward compatibility
 String InternetHandler::getCurrentDate() const {
   return timeHandler ? timeHandler->getCurrentDate() : "----/--/--";
 }
