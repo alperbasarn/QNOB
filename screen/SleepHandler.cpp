@@ -1,4 +1,9 @@
 #include "SleepHandler.h"
+#include "LoopHandler.h"
+
+void SleepHandler::setLoopHandler(LoopHandler* loop) {
+  loopHandler = loop;
+}
 
 // Static instance for singleton pattern
 static SleepHandler* instance = nullptr;
@@ -13,9 +18,11 @@ SleepHandler* SleepHandler::getInstance(SemaphoreHandle_t* mutex) {
 SleepHandler::SleepHandler(SemaphoreHandle_t* mutex)
   : displayController(nullptr),
     commandHandler(nullptr),
+    loopHandler(nullptr),
     lastActivityTime(0),
-    inactivityTimeout(30000),  // Default 30 seconds
-    enabled(false),            // Disabled by default
+    inactivityTimeout(DEEP_SLEEP_TIMEOUT),  // Default 1 hour
+    enabled(false),                         // Disabled by default
+    powerSaveEnabled(false),                // Power save mode disabled by default
     mutexPtr(mutex) {
 
   // Initialize the activity timer
@@ -58,7 +65,6 @@ bool SleepHandler::isEnabled() {
 void SleepHandler::checkActivity() {
   // Skip checking if disabled or missing required controllers
   if (!enabled || !displayController || !commandHandler) {
-    Serial.println("sleep handler not enabled or not initialized properly!");
     return;
   }
 
@@ -70,27 +76,45 @@ void SleepHandler::checkActivity() {
 
     if (hasActivity) {
       resetActivityTime();
+
+      // If we have activity and were in power save mode, disable it
+      if (powerSaveEnabled && loopHandler) {
+        loopHandler->setPowerSaveMode(false);
+        powerSaveEnabled = false;
+      }
     }
 
     xSemaphoreGive(*mutexPtr);
   }
 
-  // Check for inactivity timeout
-  int inactivityTime = millis() - lastActivityTime;
-  if (inactivityTime > inactivityTimeout) {
+  // Get current inactivity duration
+  unsigned long currentTime = millis();
+  unsigned long inactivityTime = currentTime - lastActivityTime;
+
+  // Check for power save mode threshold (30 seconds)
+  if (!powerSaveEnabled && inactivityTime >= POWER_SAVE_TIMEOUT && inactivityTime < DEEP_SLEEP_TIMEOUT) {
+    Serial.println("Inactivity threshold reached for power save mode");
+
+    if (loopHandler) {
+      loopHandler->setPowerSaveMode(true);
+      powerSaveEnabled = true;
+    }
+  }
+
+  // Check for deep sleep threshold (1 hour)
+  if (inactivityTime >= DEEP_SLEEP_TIMEOUT) {
     Serial.println("Inactivity timeout reached, entering deep sleep");
     enterDeepSleep();
   }
-  //Serial.println("Sleep handler update: inactivity time:" + String(inactivityTime) + "|| inactivity timeout duration:" + String(inactivityTimeout));
 }
 
 void SleepHandler::configureWakeupPins() {
   Serial.println("Configuring wakeup sources...");
 
-  // Configure multiple wakeup sources (both pins must be LOW to wake up)
+  // Configure wakeup sources (wake on ANY pin going LOW for better reliability)
   esp_sleep_enable_ext1_wakeup(
     (1ULL << WAKEUP_PIN_TOUCH) | (1ULL << WAKEUP_PIN_KNOB),  // Bitmask for both pins
-    ESP_EXT1_WAKEUP_ALL_LOW                                  // Trigger when ALL go LOW
+    ESP_EXT1_WAKEUP_ANY_LOW                                  // ANY pin LOW wakes device
   );
 
   // Configure RTC GPIO for WAKEUP_PIN_TOUCH

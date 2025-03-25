@@ -73,12 +73,13 @@ void InfoScreen::update() {
   // Update network status
   updateNetworkStatus();
 
+/*
   // Check for inactivity timeout
   if (currentMillis - lastActivityTime >= INACTIVITY_TIMEOUT) {
     inactivityTimeoutReached = true;
     Serial.println("InfoScreen: Inactivity timeout reached");
   }
-
+*/
   // Update time and temperature data if internet is available and it's time to update
   if (tcpClient && tcpClient->isInternetAvailable() && (currentMillis - lastUpdateTime >= UPDATE_INTERVAL)) {
     // Fetch outdoor temperature

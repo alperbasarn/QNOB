@@ -171,6 +171,7 @@ void DisplayController::setDisplayOff() {
 
 void DisplayController::turnDisplayOff() {
   if (displayIsOn) {
+    setMode(SLEEP);
     digitalWrite(DF_GFX_BL, LOW);
     displayIsOn = false;
     Serial.println("Display turned off");
@@ -187,6 +188,7 @@ void DisplayController::update() {
     if (isPressed() || (knobController && knobController->getHasNewMessage())) {
       Serial.println("Activity detected while in SLEEP mode, waking up to INFO mode");
       turnDisplayOn();
+      setMode(INFO);
       return;  // Skip the rest of the update for this cycle
     }
   } else {
@@ -214,11 +216,6 @@ void DisplayController::update() {
           infoScreen->resetPageBackRequest();
           modeController->setActive(true);
           delay(200);  // Debounce
-        }
-
-        // Check if sleep timeout reached
-        if (infoScreen->isInactivityTimeoutReached()) {
-          setDisplayOff();
         }
       }
       break;

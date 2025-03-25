@@ -29,7 +29,7 @@ private:
   int colonY = 0;  // Y position of the colon
 
   // Temperature data
-  float indoorTemp = 22.0;  // Default indoor temperature
+  float indoorTemp = 18.0;  // Default indoor temperature
   float outdoorTemp = 0.0;  // Default outdoor temperature
 
   // Previous values to detect changes
