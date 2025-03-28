@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 27 05:55:51 2025
-
-@author: Alper Basaran
-"""
-
 import paho.mqtt.client as mqtt
 import ssl
 import time
+import threading
 
 class MQTTHandler:
     """Handles MQTT connection and message processing"""
     
-    def __init__(self, message_callback=None):
+    def __init__(self, app, message_callback=None):
         # Use the recommended client creation approach
         self.client = mqtt.Client()
         
@@ -24,6 +18,7 @@ class MQTTHandler:
         
         self.connected = False
         self.message_callback = message_callback
+        self.app = app
         
         # Default MQTT broker settings
         self.broker_address = "4b664591e7764720a1ae5483e793dfa0.s1.eu.hivemq.cloud"
@@ -36,9 +31,6 @@ class MQTTHandler:
         
         # Client ID to identify messages from this client
         self.client_id = "PC"
-        
-        # Reference to the main app (will be set later)
-        self._app = None
     
     def set_broker(self, address, port=8883, username="", password=""):
         """Set MQTT broker parameters"""
@@ -57,8 +49,20 @@ class MQTTHandler:
             self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
             self.client.tls_insecure_set(False)
             
+            # Connect with timeout
             self.client.connect(self.broker_address, self.broker_port, 60)
             self.client.loop_start()
+            
+            # Wait for connection to establish or timeout
+            start_time = time.time()
+            while not self.connected and (time.time() - start_time) < 5:
+                time.sleep(0.1)
+            
+            if not self.connected:
+                if self.message_callback:
+                    self.message_callback("Connection timeout, could not connect to broker", "error")
+                return False
+                
             return True
         except Exception as e:
             if self.message_callback:
@@ -88,8 +92,9 @@ class MQTTHandler:
             self.client.subscribe("esp32/sound/get_state")
             
             # If we have an app reference, update media state to sync with ESP32
-            if self._app and hasattr(self._app, 'update_media_state'):
-                self._app.update_media_state()
+            if self.app and hasattr(self.app, 'sound_tab') and hasattr(self.app.sound_tab, 'update_mqtt_status'):
+                self.app.sound_tab.update_mqtt_status(True, self.broker_address)
+                
         else:
             self.connected = False
             error_messages = {
@@ -102,6 +107,10 @@ class MQTTHandler:
             error_msg = error_messages.get(rc, f"Unknown error code: {rc}")
             if self.message_callback:
                 self.message_callback(f"Failed to connect: {error_msg}", "error")
+                
+            # Update UI if available
+            if self.app and hasattr(self.app, 'sound_tab') and hasattr(self.app.sound_tab, 'update_mqtt_status'):
+                self.app.sound_tab.update_mqtt_status(False)
     
     def on_disconnect(self, client, userdata, rc):
         """Callback when disconnected from MQTT broker"""
@@ -109,6 +118,10 @@ class MQTTHandler:
         reason = "Unexpected disconnection" if rc != 0 else "Requested disconnection"
         if self.message_callback:
             self.message_callback(f"Disconnected from MQTT broker: {reason}", "status")
+            
+        # Update UI if available
+        if self.app and hasattr(self.app, 'sound_tab') and hasattr(self.app.sound_tab, 'update_mqtt_status'):
+            self.app.sound_tab.update_mqtt_status(False)
     
     def on_message(self, client, userdata, msg):
         """Callback when message is received"""
@@ -128,14 +141,15 @@ class MQTTHandler:
                 self.message_callback("Received state request from ESP32", "status")
             
             # Get the current Windows volume and media state
-            if self._app and hasattr(self._app, 'audio_controller') and hasattr(self._app, 'media_controller'):
-                current_volume = self._app.audio_controller.get_volume_percent()
+            if self.app and hasattr(self.app, 'audio_controller') and hasattr(self.app, 'media_controller'):
+                current_volume = self.app.audio_controller.get_volume_percent()
                 # Determine if media is playing using media controller
-                is_playing = self._app.media_controller.get_playing_state()
+                is_playing = self.app.media_controller.get_playing_state()
                 
-                # Update our local state tracking
-                self._app.is_playing = is_playing
-                self._app.update_playing_ui()
+                # Update our sound tab UI
+                if hasattr(self.app, 'sound_tab'):
+                    self.app.sound_tab.update_volume(current_volume, send_to_device=False)
+                    self.app.sound_tab.update_playing_state(is_playing)
                 
                 # Create state response message
                 state = "playing" if is_playing else "paused"
@@ -169,43 +183,69 @@ class MQTTHandler:
             # Handle media control commands
             if command == "play":
                 # Actually control media playback
-                if self._app and hasattr(self._app, 'media_controller'):
-                    is_playing = self._app.media_controller.play_pause()
-                    # If play_pause returned false, it means it couldn't play
-                    # or media is now paused
-                    self._app.is_playing = is_playing
-                    self._app.update_playing_ui()
+                if self.app and hasattr(self.app, 'media_controller'):
+                    is_playing = self.app.media_controller.play_pause()
+                    
+                    # Update UI
+                    if hasattr(self.app, 'sound_tab'):
+                        self.app.sound_tab.update_playing_state(is_playing)
                     
                     # Send status back to ESP32 to confirm the state
                     state = "playing" if is_playing else "paused"
                     self.publish("esp32/sound/response", state)
                     
-                    self.message_callback(f"Media control: play - new state: {state}", "status")
+                    if self.message_callback:
+                        self.message_callback(f"Media control: play - new state: {state}", "status")
             elif command == "pause":
                 # Actually control media playback
-                if self._app and hasattr(self._app, 'media_controller'):
+                if self.app and hasattr(self.app, 'media_controller'):
                     # If already playing, toggle to pause
-                    if self._app.is_playing:
-                        is_playing = self._app.media_controller.play_pause()
+                    if self.app.media_controller.get_playing_state():
+                        is_playing = self.app.media_controller.play_pause()
                     else:
                         is_playing = False
-                        
-                    self._app.is_playing = is_playing
-                    self._app.update_playing_ui()
+                    
+                    # Update UI
+                    if hasattr(self.app, 'sound_tab'):
+                        self.app.sound_tab.update_playing_state(is_playing)
                     
                     # Send status back to ESP32 to confirm the state
                     state = "playing" if is_playing else "paused"
                     self.publish("esp32/sound/response", state)
                     
-                    self.message_callback(f"Media control: pause - new state: {state}", "status")
+                    if self.message_callback:
+                        self.message_callback(f"Media control: pause - new state: {state}", "status")
             elif command == "forward":
-                if self._app and hasattr(self._app, 'media_controller'):
-                    self._app.media_controller.next_track()
-                    self.message_callback("Media control: forward", "status")
+                if self.app and hasattr(self.app, 'media_controller'):
+                    self.app.media_controller.next_track()
+                    if self.message_callback:
+                        self.message_callback("Media control: forward", "status")
             elif command == "rewind":
-                if self._app and hasattr(self._app, 'media_controller'):
-                    self._app.media_controller.prev_track()
-                    self.message_callback("Media control: rewind", "status")
+                if self.app and hasattr(self.app, 'media_controller'):
+                    self.app.media_controller.prev_track()
+                    if self.message_callback:
+                        self.message_callback("Media control: rewind", "status")
+        
+        # Process setpoint messages
+        elif topic == "esp32/sound/setpoint" and "setpoint:" in payload:
+            # Check if the message is from ourselves to avoid feedback loops
+            if f"sender={self.client_id}" in payload:
+                return
+                
+            # Extract the setpoint value
+            try:
+                setpoint_str = payload.split("setpoint:")[1].split(",")[0].strip()
+                setpoint = int(setpoint_str)
+                
+                # Update the audio volume in Windows
+                if self.app and hasattr(self.app, 'audio_controller'):
+                    self.app.audio_controller.set_volume_percent(setpoint)
+                    
+                if self.message_callback:
+                    self.message_callback(f"Received setpoint {setpoint} from ESP32", "status")
+            except Exception as e:
+                if self.message_callback:
+                    self.message_callback(f"Error processing setpoint: {str(e)}", "error")
     
     def on_publish(self, client, userdata, mid):
         """Callback when message is published successfully"""
@@ -239,7 +279,9 @@ class MQTTHandler:
     def is_connected(self):
         """Check if connected to MQTT broker"""
         return self.connected
-    
-    def set_app(self, app):
-        """Link this handler with the main app for access to audio controller"""
-        self._app = app
+        
+    def get_broker_info(self):
+        """Get the broker address and port"""
+        if self.broker_address:
+            return f"{self.broker_address}:{self.broker_port}"
+        return ""
