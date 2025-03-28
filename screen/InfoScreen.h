@@ -21,8 +21,15 @@ private:
   String formattedDate;     // Stores formatted date like "MON 17 MAR"
   String currentDayOfWeek = "---"; // Current day of week (MON, TUE, etc.)
 
+  // For blinking colon
+  bool colonVisible = true;
+  unsigned long lastColonToggleTime = 0;
+  const unsigned long COLON_BLINK_INTERVAL = 1000; // 1 second interval
+  int colonX = 0;  // X position of the colon
+  int colonY = 0;  // Y position of the colon
+
   // Temperature data
-  float indoorTemp = 22.0;  // Default indoor temperature
+  float indoorTemp = 18.0;  // Default indoor temperature
   float outdoorTemp = 0.0;  // Default outdoor temperature
 
   // Previous values to detect changes
@@ -69,6 +76,7 @@ private:
 
   // Screen rendering - called internally from update()
   void drawDateTime();
+  void drawColonOnly();  // New method to only update the colon
   void drawTemperatureArcs();
   void drawWiFiStatus();
 
@@ -77,7 +85,7 @@ private:
   void drawArc(int x, int y, int radius, int thickness, float startAngle, float endAngle, 
                float value, float minValue, float maxValue, uint16_t startColor, uint16_t endColor, 
                bool showTemp, const String& label, float fillAngle);
-  uint16_t getTemperatureColor(float temperature);
+  uint16_t getTemperatureColor(float temperature, bool isIndoor);
   String getMonthName(int month);
 
   // Network status update - called internally

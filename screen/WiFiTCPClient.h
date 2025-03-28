@@ -35,7 +35,7 @@ public:
   void beginOTA(const char* hostname);  // Initialize OTA
   int getWiFiSignalStrength();          // Get WiFi signal strength (0-3)
 
-  // TCP methods
+  // TCP methods (keeping for backward compatibility)
   void sendTCPResponse(const String& message);  // Send response to TCP client
   bool getHasNewMessage();                      // Check if there's a new TCP message
   String getMessage();                          // Get the received TCP message
@@ -53,6 +53,10 @@ public:
   bool hasSoundMQTTConfigured();                                   // Check if Sound MQTT is configured
   bool hasLightMQTTConfigured();                                   // Check if Light MQTT is configured
   bool isMQTTConnected();                                          // Check if MQTT is connected
+  
+  // New methods for sound message handling
+  bool getHasSoundMessage();                                       // Check for new sound messages
+  String getSoundMessage();                                        // Get the sound message content
 
   // Time and weather methods
   String getCurrentDate();  // Get current date
@@ -63,6 +67,10 @@ public:
   // Load configuration and update
   void loadConfiguration();  // Load configuration from EEPROM
   void update();             // Run periodic updates on all handlers
+  
+  // Access to handlers
+  MQTTHandler* getMQTTHandler() { return mqttHandler; }  // Get access to the MQTT handler
+  WiFiHandler* getWiFiHandler() { return wifiHandler; }  // Get access to the WiFi handler
 };
 
 #endif  // WIFI_TCP_CLIENT_H

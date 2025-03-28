@@ -12,7 +12,7 @@ class WiFiTCPClient;
 
 class CommandHandler {
 private:
-bool hasNewMessage;
+  bool hasNewMessage;
   typedef void (CommandHandler::*CommandFunction)(const String& params);
   
   struct Command {
@@ -22,7 +22,7 @@ bool hasNewMessage;
   };
   
   // Command storage
-  Command commands[20]; // Increased to support more commands
+  Command commands[25]; // Increased to support more commands
   int commandCount = 0;
   
   // Dependencies
@@ -55,6 +55,12 @@ bool hasNewMessage;
   void cmdConfigureLightMQTTServer(const String& params);
   void cmdCommInfo(const String& params);
   void cmdSetDeviceName(const String& params);
+  
+  // New command handlers for static IP configuration
+  void cmdConfigureStaticIP(const String& params);
+  void cmdEnableStaticIP(const String& params);
+  void cmdDisableStaticIP(const String& params);
+  void cmdShowStaticIP(const String& params);
   
   // Process command from various sources
   void processKnobCommand(const String& command);

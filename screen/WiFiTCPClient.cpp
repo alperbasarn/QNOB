@@ -289,6 +289,14 @@ void WiFiTCPClient::update() {
 
 // Add this method to your existing WiFiHandler.cpp file
 
+bool WiFiTCPClient::getHasSoundMessage() {
+  return mqttHandler ? mqttHandler->getHasSoundMessage() : false;
+}
+
+String WiFiTCPClient::getSoundMessage() {
+  return mqttHandler ? mqttHandler->getSoundMessage() : "";
+}
+
 int WiFiHandler::getWiFiSignalStrength() {
   if (!wifiConnected) {
     return 0;  // No signal if not connected

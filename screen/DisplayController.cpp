@@ -4,15 +4,19 @@ DisplayController::DisplayController(Arduino_GFX* graphics, int sda, int scl, in
   : gfx(graphics), tcpClient(tcpClient), displayIsOn(true), soundController(nullptr),
     modeController(nullptr), lightController(nullptr), knobController(nullptr),
     initializationScreen(nullptr), infoScreen(nullptr), currentMode(INITIALIZATION),
-    lastActivityTime(0), deepSleepEnabled(true), screenPressed(false), screenReleased(false) {
+    lastActivityTime(0), screenPressed(false), screenReleased(false) {
 
   // Initialize touch panel first
   touchPanel = new TouchPanel(sda, scl, rst, irq);
 
-  // Create all controllers
-  soundController = new SoundController(gfx, touchPanel, tcpClient);
+  // Create all controllers - use the MQTTHandler from WiFiTCPClient
+  // Now that we have the knob controller, we can initialize the light controller
+  // Pass nullptr for MQTTHandler if tcpClient is nullptr
+  MQTTHandler* mqttHandler = (tcpClient != nullptr) ? tcpClient->getMQTTHandler() : nullptr;
+  lightController = new LightController(gfx, touchPanel, mqttHandler);
+  soundController = new SoundController(gfx, touchPanel, mqttHandler);
   modeController = new ModeController(gfx, touchPanel, tcpClient);
-  initializationScreen = new InitializationScreen(gfx, touchPanel);
+  initializationScreen = new InitializationScreen(gfx);
   infoScreen = new InfoScreen(gfx, touchPanel, tcpClient);
 
   // Light controller is initialized later in registerKnobController
@@ -37,18 +41,22 @@ void DisplayController::initScreen() {
 
 void DisplayController::registerKnobController(KnobController* knob) {
   knobController = knob;
-  // Now that we have the knob controller, we can initialize the light controller
-  lightController = new LightController(gfx, touchPanel, tcpClient, knobController);
 }
 
 void DisplayController::setTCPClient(WiFiTCPClient* client) {
   tcpClient = client;
 
-  // Update client reference in all controllers that need it
-  if (soundController) soundController->setTCPClient(client);
+  // Update TCP client in controllers that use it directly
   if (modeController) modeController->setTCPClient(client);
-  if (lightController) lightController->setTCPClient(client);
   if (infoScreen) infoScreen->setTCPClient(client);
+
+  // Update MQTTHandler in controllers that use it directly
+  // First check if client is valid to avoid null dereference
+  if (client) {
+    MQTTHandler* mqttHandler = client->getMQTTHandler();
+    if (soundController) soundController->setMQTTHandler(mqttHandler);
+    if (lightController) lightController->setMQTTHandler(mqttHandler);
+  }
 }
 
 void DisplayController::updateInitProgress(int progress) {
@@ -62,6 +70,7 @@ void DisplayController::updateInitProgress(int progress) {
       initializationScreen->setMQTTStatus(mqttConnected);
     }
 
+    // Set progress with new method which handles animation
     initializationScreen->setProgress(progress);
   }
 }
@@ -148,13 +157,12 @@ void DisplayController::checkActivityAndAutoSwitch() {
   unsigned long currentMillis = millis();
 
   // Don't auto-switch during initialization, calibration, or when already in INFO or SLEEP mode
-  if (currentMode == INITIALIZATION || currentMode == CALIBRATE_ORIENTATION || 
-      currentMode == INFO || currentMode == SLEEP) {
+  if (currentMode == INITIALIZATION || currentMode == CALIBRATE_ORIENTATION || currentMode == INFO || currentMode == SLEEP) {
     return;
   }
 
   // If inactive for 10 seconds from any mode, switch to info mode
-  if (currentMillis - lastActivityTime >= 10000) {
+  if (currentMillis - lastActivityTime >= 20000) {
     setMode(INFO);
     if (infoScreen) {
       infoScreen->resetLastActivityTime();
@@ -163,7 +171,7 @@ void DisplayController::checkActivityAndAutoSwitch() {
   }
 }
 
-void DisplayController::goToSleep() {
+void DisplayController::setDisplayOff() {
   // Use FADE transition to sleep
   setMode(SLEEP);
   turnDisplayOff();
@@ -171,6 +179,7 @@ void DisplayController::goToSleep() {
 
 void DisplayController::turnDisplayOff() {
   if (displayIsOn) {
+    setMode(SLEEP);
     digitalWrite(DF_GFX_BL, LOW);
     displayIsOn = false;
     Serial.println("Display turned off");
@@ -181,13 +190,14 @@ void DisplayController::update() {
     knobController->update();
   }
   touchPanel->handleTouchPanel();
-  
+
   // If we're in sleep mode and detect activity, wake up to INFO mode
   if (currentMode == SLEEP) {
     if (isPressed() || (knobController && knobController->getHasNewMessage())) {
       Serial.println("Activity detected while in SLEEP mode, waking up to INFO mode");
       turnDisplayOn();
-      return; // Skip the rest of the update for this cycle
+      setMode(INFO);
+      return;  // Skip the rest of the update for this cycle
     }
   } else {
     // Check for activity and handle auto-switching between modes
@@ -197,35 +207,31 @@ void DisplayController::update() {
   // Process the current mode
   switch (currentMode) {
     case INITIALIZATION:
+      // Make sure to update the initialization screen animation on every frame
       if (initializationScreen) {
         initializationScreen->updateScreen();
       }
       break;
-      
+
     case INFO:
       if (infoScreen) {
         // Simply call update - let InfoScreen handle everything internally
         infoScreen->update();
-        
+
         // Only check the necessary flags after the update
         if (infoScreen->isPageBackRequested()) {
           setMode(HOME);
           infoScreen->resetPageBackRequest();
           modeController->setActive(true);
-          delay(200); // Debounce
-        }
-        
-        // Check if sleep timeout reached
-        if (infoScreen->isInactivityTimeoutReached() && deepSleepEnabled) {
-          goToSleep();
+          delay(200);  // Debounce
         }
       }
       break;
-    
+
     case CALIBRATE_ORIENTATION:
       drawCalibrationMark();
       break;
-      
+
     case SOUND:
       if (soundController) {
         soundController->updateScreen();
@@ -237,7 +243,7 @@ void DisplayController::update() {
         }
       }
       break;
-      
+
     case LIGHT:
       if (lightController) {
         lightController->updateScreen();
@@ -249,7 +255,7 @@ void DisplayController::update() {
         }
       }
       break;
-      
+
     case HOME:
       if (modeController) {
         if (!modeControllerInitialized) {
@@ -276,8 +282,8 @@ void DisplayController::update() {
               modeController->setActive(false);
               if (tcpClient) {
                 if (tcpClient->hasSoundMQTTConfigured()) {
-                  tcpClient->initializeMQTT();
-                  tcpClient->connectToMQTTServer();
+                  tcpClient->getMQTTHandler()->initializeMQTT(false);  // Initialize with sound configuration
+                  tcpClient->getMQTTHandler()->connectToMQTTServer();
                 } else {
                   Serial.println("Sound MQTT not configured, skipping connection");
                 }
@@ -292,8 +298,8 @@ void DisplayController::update() {
               modeController->setActive(false);
               if (tcpClient) {
                 if (tcpClient->hasLightMQTTConfigured()) {
-                  tcpClient->initializeMQTT();
-                  tcpClient->connectToMQTTServer();
+                  tcpClient->getMQTTHandler()->initializeMQTT(true);  // Initialize with light configuration
+                  tcpClient->getMQTTHandler()->connectToMQTTServer();
                 } else {
                   Serial.println("Light MQTT not configured, skipping connection");
                 }
@@ -307,26 +313,25 @@ void DisplayController::update() {
         }
       }
       break;
-      
+
     case SLEEP:
       // In sleep mode, just wait for activity detection (handled at the beginning of update)
       break;
-      
+
     default:
       break;
   }
 }
-
 // Replace the turnDisplayOn method
 void DisplayController::turnDisplayOn() {
   if (!displayIsOn) {
     digitalWrite(DF_GFX_BL, HIGH);
     displayIsOn = true;
     Serial.println("Display turned on");
-    
+
     // Reset activity time
     resetActivityTime();
-    
+
     // Return to info mode if coming from sleep
     if (currentMode == SLEEP) {
       // Force a proper redraw of the info screen
@@ -490,9 +495,6 @@ void DisplayController::setMode(Mode mode) {
   resetActivityTime();
 }
 
-void DisplayController::setDeepSleepEnabled(bool enabled) {
-  deepSleepEnabled = enabled;
-}
 
 bool DisplayController::getPressed() {
   return touchPanel->isPressed();
@@ -503,9 +505,7 @@ bool DisplayController::isPressed() {
 }
 
 bool DisplayController::isPageBackRequested() {
-  return (soundController && soundController->isPageBackRequested()) || 
-         (lightController && lightController->isPageBackRequested()) || 
-         (infoScreen && infoScreen->isPageBackRequested());
+  return (soundController && soundController->isPageBackRequested()) || (lightController && lightController->isPageBackRequested()) || (infoScreen && infoScreen->isPageBackRequested());
 }
 
 DisplayController::~DisplayController() {

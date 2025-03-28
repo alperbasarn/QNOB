@@ -22,13 +22,20 @@ void CommandHandler::initialize() {
   commands[commandCount++] = { "calibrateOrientation", &CommandHandler::cmdCalibrateOrientation, "Calibrate device orientation" };
   commands[commandCount++] = { "setpoint", &CommandHandler::cmdKnobSetpoint, "Set the setpoint value" };
 
-  // Register new commands for server configuration
+  // Register existing server configuration commands
   commands[commandCount++] = { "configureSoundTCPServer", &CommandHandler::cmdConfigureSoundTCPServer, "configureSoundTCPServer:IP:Port - Configure Sound TCP Server" };
   commands[commandCount++] = { "configureLightTCPServer", &CommandHandler::cmdConfigureLightTCPServer, "configureLightTCPServer:IP:Port - Configure Light TCP Server" };
   commands[commandCount++] = { "configureSoundMQTTServer", &CommandHandler::cmdConfigureSoundMQTTServer, "configureSoundMQTTServer:URL:Port:Username:Password - Configure Sound MQTT Server" };
   commands[commandCount++] = { "configureLightMQTTServer", &CommandHandler::cmdConfigureLightMQTTServer, "configureLightMQTTServer:URL:Port:Username:Password - Configure Light MQTT Server" };
   commands[commandCount++] = { "commInfo", &CommandHandler::cmdCommInfo, "Display all communication configuration information" };
   commands[commandCount++] = { "setDeviceName", &CommandHandler::cmdSetDeviceName, "setDeviceName:name - Set device name" };
+  
+  // Register new static IP configuration commands
+  commands[commandCount++] = { "configureStaticIP", &CommandHandler::cmdConfigureStaticIP, "configureStaticIP:IP:Gateway:Subnet:DNS1:DNS2 - Configure static IP settings" };
+  commands[commandCount++] = { "enableStaticIP", &CommandHandler::cmdEnableStaticIP, "Enable static IP configuration" };
+  commands[commandCount++] = { "disableStaticIP", &CommandHandler::cmdDisableStaticIP, "Disable static IP configuration (use DHCP)" };
+  commands[commandCount++] = { "showStaticIP", &CommandHandler::cmdShowStaticIP, "Show current static IP configuration" };
+  
   commands[commandCount++] = { "help", &CommandHandler::cmdHelp, "Show available commands" };
 
   Serial.println("Serial interface initialized.");
@@ -517,6 +524,125 @@ void CommandHandler::cmdSetDeviceName(const String& params) {
   String successMsg = "Device name set to: " + params;
   Serial.println(successMsg);
   sendTCPResponse(successMsg);
+}
+
+// New command implementations for static IP configuration
+void CommandHandler::cmdConfigureStaticIP(const String& params) {
+  // Parse the parameters
+  int firstColon = params.indexOf(':');
+  int secondColon = params.indexOf(':', firstColon + 1);
+  int thirdColon = params.indexOf(':', secondColon + 1);
+  int fourthColon = params.indexOf(':', thirdColon + 1);
+  
+  if (firstColon == -1 || secondColon == -1 || thirdColon == -1) {
+    String errorMsg = "[Error] Invalid format! Use: configureStaticIP:IP:Gateway:Subnet:DNS1:DNS2";
+    Serial.println(errorMsg);
+    sendTCPResponse(errorMsg);
+    return;
+  }
+  
+  String ip = params.substring(0, firstColon);
+  String gateway = params.substring(firstColon + 1, secondColon);
+  String subnet = params.substring(secondColon + 1, thirdColon);
+  
+  String dns1 = "8.8.8.8"; // Default primary DNS
+  String dns2 = "8.8.4.4"; // Default secondary DNS
+  
+  if (thirdColon != -1) {
+    if (fourthColon != -1) {
+      dns1 = params.substring(thirdColon + 1, fourthColon);
+      dns2 = params.substring(fourthColon + 1);
+    } else {
+      dns1 = params.substring(thirdColon + 1);
+    }
+  }
+  
+  // Validate IP addresses
+  IPAddress ipAddr, gwAddr, subnetAddr, dns1Addr, dns2Addr;
+  if (!ipAddr.fromString(ip) || !gwAddr.fromString(gateway) || 
+      !subnetAddr.fromString(subnet) || !dns1Addr.fromString(dns1) || 
+      !dns2Addr.fromString(dns2)) {
+    String errorMsg = "[Error] Invalid IP address format!";
+    Serial.println(errorMsg);
+    sendTCPResponse(errorMsg);
+    return;
+  }
+  
+  // Save to EEPROM
+  eepromManager->saveStaticIPConfig(true, ip, gateway, subnet, dns1, dns2);
+  
+  // Apply configuration to TCPHandler via WiFiTCPClient
+  if (tcpClient) {
+    // The TCP client will apply the configuration to TCPHandler
+    String successMsg = "[Config] Static IP configuration saved and will be applied on next restart";
+    Serial.println(successMsg);
+    sendTCPResponse(successMsg);
+    
+    // Send configuration details
+    sendTCPResponse("  IP: " + ip);
+    sendTCPResponse("  Gateway: " + gateway);
+    sendTCPResponse("  Subnet: " + subnet);
+    sendTCPResponse("  DNS1: " + dns1);
+    sendTCPResponse("  DNS2: " + dns2);
+  } else {
+    String errorMsg = "[Error] TCP client not available!";
+    Serial.println(errorMsg);
+    sendTCPResponse(errorMsg);
+  }
+}
+
+void CommandHandler::cmdEnableStaticIP(const String& params) {
+  // Enable static IP using current configuration
+  eepromManager->staticIPEnabled = true;
+  eepromManager->saveStaticIPConfig(
+    true,
+    eepromManager->staticIP,
+    eepromManager->staticGateway,
+    eepromManager->staticSubnet,
+    eepromManager->staticDNS1,
+    eepromManager->staticDNS2
+  );
+  
+  String successMsg = "[Config] Static IP enabled. Configuration will be applied on next restart.";
+  Serial.println(successMsg);
+  sendTCPResponse(successMsg);
+}
+
+void CommandHandler::cmdDisableStaticIP(const String& params) {
+  // Disable static IP (use DHCP)
+  eepromManager->staticIPEnabled = false;
+  eepromManager->saveStaticIPConfig(
+    false,
+    eepromManager->staticIP,
+    eepromManager->staticGateway,
+    eepromManager->staticSubnet,
+    eepromManager->staticDNS1,
+    eepromManager->staticDNS2
+  );
+  
+  String successMsg = "[Config] Static IP disabled. DHCP will be used on next restart.";
+  Serial.println(successMsg);
+  sendTCPResponse(successMsg);
+}
+
+void CommandHandler::cmdShowStaticIP(const String& params) {
+  // Display static IP configuration
+  String info = eepromManager->getStaticIPInfo();
+  Serial.println(info);
+  
+  // Split the info into lines for TCP response
+  int startPos = 0;
+  int endPos = info.indexOf('\n');
+  while (endPos != -1) {
+    String line = info.substring(startPos, endPos);
+    sendTCPResponse(line);
+    startPos = endPos + 1;
+    endPos = info.indexOf('\n', startPos);
+  }
+  // Send last line if any
+  if (startPos < info.length()) {
+    sendTCPResponse(info.substring(startPos));
+  }
 }
 
 bool CommandHandler::getHasNewMessage() {

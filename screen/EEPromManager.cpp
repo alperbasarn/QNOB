@@ -17,6 +17,14 @@ EEPROMManager::EEPROMManager()
   lightMQTTPassword = "";
   deviceName = "ESP32Device"; // Set a default device name
   
+  // Initialize static IP configuration with defaults
+  staticIPEnabled = false;
+  staticIP = "192.168.4.1";
+  staticGateway = "192.168.4.1";
+  staticSubnet = "255.255.255.0";
+  staticDNS1 = "8.8.8.8";
+  staticDNS2 = "8.8.4.4";
+  
   for (int i = 0; i < NUM_WIFI_CREDENTIALS; i++) {
     wifiCredentials[i].ssid = "";
     wifiCredentials[i].password = "";
@@ -127,6 +135,14 @@ void EEPROMManager::clearEntireEEPROM() {
   lightMQTTPassword = "";
   deviceName = "ESP32Device";
   
+  // Reset static IP configuration
+  staticIPEnabled = false;
+  staticIP = "192.168.4.1";
+  staticGateway = "192.168.4.1";
+  staticSubnet = "255.255.255.0";
+  staticDNS1 = "8.8.8.8";
+  staticDNS2 = "8.8.4.4";
+  
   for (int i = 0; i < NUM_WIFI_CREDENTIALS; i++) {
     wifiCredentials[i].ssid = "";
     wifiCredentials[i].password = "";
@@ -191,6 +207,58 @@ void EEPROMManager::saveDeviceName(const String& name) {
   Serial.println("Device name saved: " + name);
 }
 
+// Save static IP configuration (new)
+void EEPROMManager::saveStaticIPConfig(bool enabled, const String& ip, const String& gateway, 
+                                      const String& subnet, const String& dns1, const String& dns2) {
+  EEPROM.write(STATIC_IP_ENABLED_ADDRESS, enabled ? 1 : 0);
+  writeStringToEEPROM(STATIC_IP_ADDRESS, ip, MAX_IP_LENGTH);
+  writeStringToEEPROM(STATIC_GATEWAY_ADDRESS, gateway, MAX_IP_LENGTH);
+  writeStringToEEPROM(STATIC_SUBNET_ADDRESS, subnet, MAX_IP_LENGTH);
+  writeStringToEEPROM(STATIC_DNS1_ADDRESS, dns1, MAX_IP_LENGTH);
+  writeStringToEEPROM(STATIC_DNS2_ADDRESS, dns2, MAX_IP_LENGTH);
+  
+  staticIPEnabled = enabled;
+  staticIP = ip;
+  staticGateway = gateway;
+  staticSubnet = subnet;
+  staticDNS1 = dns1;
+  staticDNS2 = dns2;
+  
+  EEPROM.commit();
+  Serial.println("Static IP configuration saved:");
+  Serial.println("  Enabled: " + String(enabled ? "Yes" : "No"));
+  Serial.println("  IP: " + ip);
+  Serial.println("  Gateway: " + gateway);
+  Serial.println("  Subnet: " + subnet);
+  Serial.println("  DNS1: " + dns1);
+  Serial.println("  DNS2: " + dns2);
+}
+
+// Load static IP configuration (new)
+void EEPROMManager::loadStaticIPConfig() {
+  staticIPEnabled = (EEPROM.read(STATIC_IP_ENABLED_ADDRESS) == 1);
+  staticIP = readStringFromEEPROM(STATIC_IP_ADDRESS, MAX_IP_LENGTH);
+  staticGateway = readStringFromEEPROM(STATIC_GATEWAY_ADDRESS, MAX_IP_LENGTH);
+  staticSubnet = readStringFromEEPROM(STATIC_SUBNET_ADDRESS, MAX_IP_LENGTH);
+  staticDNS1 = readStringFromEEPROM(STATIC_DNS1_ADDRESS, MAX_IP_LENGTH);
+  staticDNS2 = readStringFromEEPROM(STATIC_DNS2_ADDRESS, MAX_IP_LENGTH);
+  
+  // If any values are empty, set defaults
+  if (staticIP.isEmpty()) staticIP = "192.168.4.1";
+  if (staticGateway.isEmpty()) staticGateway = "192.168.4.1";
+  if (staticSubnet.isEmpty()) staticSubnet = "255.255.255.0";
+  if (staticDNS1.isEmpty()) staticDNS1 = "8.8.8.8";
+  if (staticDNS2.isEmpty()) staticDNS2 = "8.8.4.4";
+  
+  Serial.println("Static IP configuration loaded:");
+  Serial.println("  Enabled: " + String(staticIPEnabled ? "Yes" : "No"));
+  Serial.println("  IP: " + staticIP);
+  Serial.println("  Gateway: " + staticGateway);
+  Serial.println("  Subnet: " + staticSubnet);
+  Serial.println("  DNS1: " + staticDNS1);
+  Serial.println("  DNS2: " + staticDNS2);
+}
+
 void EEPROMManager::loadAllConfigurations() {
   // Load WiFi credentials
   loadWiFiCredentials();
@@ -221,6 +289,9 @@ void EEPROMManager::loadAllConfigurations() {
     writeStringToEEPROM(DEVICE_NAME_ADDRESS, deviceName, MAX_DEVICE_NAME_LENGTH);
     EEPROM.commit();
   }
+  
+  // Load static IP configuration
+  loadStaticIPConfig();
   
   Serial.println("All configurations loaded.");
 }
@@ -263,7 +334,29 @@ String EEPROMManager::getConfigurationInfo() {
   info += "Light MQTT Server:\n";
   info += "  URL: " + (lightMQTTServerURL.isEmpty() ? "Not Set" : lightMQTTServerURL) + "\n";
   info += "  Port: " + String(lightMQTTServerPort) + "\n";
-  info += "  Username: " + (lightMQTTUsername.isEmpty() ? "Not Set" : lightMQTTUsername) + "\n";
+  info += "  Username: " + (lightMQTTUsername.isEmpty() ? "Not Set" : lightMQTTUsername) + "\n\n";
+  
+  // Static IP configuration
+  info += "Static IP Configuration:\n";
+  info += "  Enabled: " + String(staticIPEnabled ? "Yes" : "No") + "\n";
+  info += "  IP: " + staticIP + "\n";
+  info += "  Gateway: " + staticGateway + "\n";
+  info += "  Subnet: " + staticSubnet + "\n";
+  info += "  DNS1: " + staticDNS1 + "\n";
+  info += "  DNS2: " + staticDNS2 + "\n";
+  
+  return info;
+}
+
+// New method to get static IP info
+String EEPROMManager::getStaticIPInfo() {
+  String info = "Static IP Configuration:\n";
+  info += "  Enabled: " + String(staticIPEnabled ? "Yes" : "No") + "\n";
+  info += "  IP: " + staticIP + "\n";
+  info += "  Gateway: " + staticGateway + "\n";
+  info += "  Subnet: " + staticSubnet + "\n";
+  info += "  DNS1: " + staticDNS1 + "\n";
+  info += "  DNS2: " + staticDNS2 + "\n";
   
   return info;
 }
