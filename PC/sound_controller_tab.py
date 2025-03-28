@@ -86,53 +86,6 @@ class SoundControllerTab:
         
         self.player_display = ttk.Label(status_frame, text="None", foreground="gray")
         self.player_display.pack(side=tk.LEFT)
-        
-        # MQTT status section
-        mqtt_frame = ttk.LabelFrame(self.frame, text="MQTT Status")
-        mqtt_frame.pack(fill=tk.X, padx=10, pady=5)
-        
-        mqtt_status_frame = ttk.Frame(mqtt_frame)
-        mqtt_status_frame.pack(fill=tk.X, pady=5)
-        
-        # Connection status
-        ttk.Label(mqtt_status_frame, text="MQTT Connection:").grid(row=0, column=0, padx=5, sticky=tk.W)
-        self.mqtt_status = ttk.Label(mqtt_status_frame, text="Disconnected", foreground="red")
-        self.mqtt_status.grid(row=0, column=1, padx=5, sticky=tk.W)
-        
-        # Broker address
-        ttk.Label(mqtt_status_frame, text="Broker:").grid(row=1, column=0, padx=5, sticky=tk.W)
-        self.mqtt_broker = ttk.Label(mqtt_status_frame, text="Not configured")
-        self.mqtt_broker.grid(row=1, column=1, padx=5, sticky=tk.W)
-        
-        # MQTT buttons
-        mqtt_buttons_frame = ttk.Frame(mqtt_frame)
-        mqtt_buttons_frame.pack(fill=tk.X, pady=5)
-        
-        self.mqtt_connect_btn = ttk.Button(mqtt_buttons_frame, text="Connect MQTT", 
-                                          command=self.connect_mqtt)
-        self.mqtt_connect_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.mqtt_disconnect_btn = ttk.Button(mqtt_buttons_frame, text="Disconnect MQTT", 
-                                             command=self.disconnect_mqtt, state=tk.DISABLED)
-        self.mqtt_disconnect_btn.pack(side=tk.LEFT, padx=5)
-        
-        # Help text
-        help_frame = ttk.LabelFrame(self.frame, text="Usage Instructions")
-        help_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        
-        help_text = """
-        This application allows you to control media playback and volume on your PC,
-        and synchronize it with a QNOB (Quantum Knob) device.
-        
-        1. Connect to the QNOB device using the Connect tab
-        2. Use the slider to adjust volume
-        3. Use the media buttons to control playback
-        4. Configure the QNOB device using the Configure tab
-        
-        All media controls will be synchronized between the PC and the QNOB device.
-        """
-        
-        ttk.Label(help_frame, text=help_text, wraplength=600, justify=tk.LEFT).pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
     
     def on_volume_slider_change(self, value):
         """Handle volume slider change"""
@@ -204,40 +157,3 @@ class SoundControllerTab:
             self.player_display.config(text=player_name, foreground="blue")
         else:
             self.player_display.config(text="None", foreground="gray")
-    
-    def connect_mqtt(self):
-        """Connect to MQTT broker"""
-        if self.app.mqtt_handler:
-            # Get broker info from MQTT handler
-            broker = self.app.mqtt_handler.get_broker_info()
-            if broker:
-                self.mqtt_broker.config(text=broker)
-            
-            # Attempt connection
-            if self.app.mqtt_handler.connect():
-                # Update UI
-                self.mqtt_status.config(text="Connected", foreground="green")
-                self.mqtt_connect_btn.config(state=tk.DISABLED)
-                self.mqtt_disconnect_btn.config(state=tk.NORMAL)
-    
-    def disconnect_mqtt(self):
-        """Disconnect from MQTT broker"""
-        if self.app.mqtt_handler:
-            self.app.mqtt_handler.disconnect()
-            
-            # Update UI
-            self.mqtt_status.config(text="Disconnected", foreground="red")
-            self.mqtt_connect_btn.config(state=tk.NORMAL)
-            self.mqtt_disconnect_btn.config(state=tk.DISABLED)
-    
-    def update_mqtt_status(self, connected, broker=""):
-        """Update MQTT connection status display"""
-        if connected:
-            self.mqtt_status.config(text="Connected", foreground="green")
-            self.mqtt_broker.config(text=broker)
-            self.mqtt_connect_btn.config(state=tk.DISABLED)
-            self.mqtt_disconnect_btn.config(state=tk.NORMAL)
-        else:
-            self.mqtt_status.config(text="Disconnected", foreground="red")
-            self.mqtt_connect_btn.config(state=tk.NORMAL)
-            self.mqtt_disconnect_btn.config(state=tk.DISABLED)

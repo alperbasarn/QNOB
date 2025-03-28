@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar 28 03:13:44 2025
+
+@author: Alper Basaran
+"""
+
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 import serial.tools.list_ports
@@ -114,7 +121,7 @@ class SerialSubTab:
             self.reader_thread = threading.Thread(target=self.read_serial, daemon=True)
             self.reader_thread.start()
             
-            self.app.handle_message(f"Connected to {port} at {baud} baud", "serial_status")
+            self.app.handle_message(f"Connected to {port} at {baud} baud", "status")
         
         except Exception as e:
             self.app.handle_message(f"Serial connection error: {str(e)}", "error")
@@ -141,7 +148,7 @@ class SerialSubTab:
             self.app.connection_type = None
             self.app.update_connection_status()
             
-            self.app.handle_message("Serial disconnected", "serial_status")
+            self.app.handle_message("Serial disconnected", "status")
     
     def read_serial(self):
         """Background thread to read from serial port"""
@@ -174,17 +181,10 @@ class SerialSubTab:
         if not command:
             return
             
-        # Add newline if not already there
-        if not command.endswith('\n'):
-            command += '\n'
-        
-        try:
-            self.serial_port.write(command.encode())
-            self.app.handle_message(f"Sent: {command.strip()}", "serial_sent")
+        # Use the app's central command sender
+        if self.app.send_command(command):
             # Clear the entry if sent successfully
             self.command_entry.delete(0, tk.END)
-        except Exception as e:
-            self.app.handle_message(f"Serial send error: {str(e)}", "error")
     
     def log_message(self, message, message_type="status"):
         """Log message to the appropriate text area"""
