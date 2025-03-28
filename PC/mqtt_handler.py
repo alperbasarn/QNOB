@@ -132,7 +132,8 @@ class MQTTHandler:
             payload = f"Binary data ({len(msg.payload)} bytes)"
         
         if self.message_callback:
-            self.message_callback(f"Received [{topic}]: {payload}", "received")
+            # Only send with mqtt_received type to prevent duplication
+            self.message_callback(f"Received [{topic}]: {payload}", "mqtt_received")
         
         # Handle state request message
         if topic == "esp32/sound/get_state" and "request" in payload:
@@ -249,9 +250,8 @@ class MQTTHandler:
     
     def on_publish(self, client, userdata, mid):
         """Callback when message is published successfully"""
-        # This confirms the message was delivered to the broker
-        if self.message_callback:
-            self.message_callback(f"Message {mid} successfully published", "status")
+        # Disabled to avoid extra "successfully published" messages
+        pass
     
     def publish(self, topic, message):
         """Publish message to topic with sender ID"""
@@ -265,7 +265,8 @@ class MQTTHandler:
             result = self.client.publish(topic, full_message, qos=1)
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 if self.message_callback:
-                    self.message_callback(f"Sent [{topic}]: {full_message}", "sent")
+                    # Only log the original message the user sent
+                    self.message_callback(f"Sent [{topic}]: {message}", "mqtt_sent")
                 return True
             else:
                 if self.message_callback:

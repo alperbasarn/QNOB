@@ -10,6 +10,7 @@ from mqtt_handler import MQTTHandler
 from connect_tab import ConnectTab
 from configure_tab import ConfigureTab
 from sound_controller_tab import SoundControllerTab
+from config_handler import ConfigHandler  # Import the new config handler
 
 # Define a unique sender ID for this application
 SENDER_ID = "QNOB"
@@ -22,6 +23,9 @@ class QNOBApp:
         self.root.title("QNOB Control System")
         self.root.geometry("900x650")
         self.root.minsize(800, 600)
+        
+        # Initialize config handler
+        self.config_handler = ConfigHandler()
         
         # Global connection status variables
         self.serial_connected = False
@@ -46,6 +50,16 @@ class QNOBApp:
         # Set up status bar at bottom of window
         self.create_status_bar()
         
+        # Initialize MQTT handler with config 
+        mqtt_config = self.config_handler.get_mqtt_config()
+        self.mqtt_handler = MQTTHandler(self, self.handle_message)
+        self.mqtt_handler.set_broker(
+            mqtt_config.get("broker", ""),
+            mqtt_config.get("port", 8883),
+            mqtt_config.get("username", ""),
+            mqtt_config.get("password", "")
+        )
+        
         # Sound Controller Tab (Main tab)
         self.sound_tab = SoundControllerTab(self.notebook, self)
         self.notebook.add(self.sound_tab.frame, text="Sound & Media")
@@ -57,9 +71,6 @@ class QNOBApp:
         # Configure Tab (initially disabled)
         self.configure_tab = ConfigureTab(self.notebook, self)
         self.notebook.add(self.configure_tab.frame, text="Configure")
-        
-        # Initialize mqtt_handler after tabs are created
-        self.mqtt_handler = MQTTHandler(self, self.handle_message)
         
         # Initially disable Configure tab until connection is established
         self.notebook.tab(2, state="disabled")

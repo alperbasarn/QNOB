@@ -6,10 +6,11 @@ Created on Fri Mar 28 03:13:44 2025
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk
 import socket
 import threading
 import time
+from terminal_classes import TCPTerminal
 
 class TCPSubTab:
     def __init__(self, notebook, app):
@@ -53,34 +54,8 @@ class TCPSubTab:
         self.disconnect_btn = ttk.Button(controls_frame, text="Disconnect", command=self.disconnect_tcp, state=tk.DISABLED)
         self.disconnect_btn.grid(row=0, column=6, padx=5, pady=5)
         
-        # Message display area - split into sent and received
-        messages_frame = ttk.Frame(self.frame)
-        messages_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Sent messages
-        ttk.Label(messages_frame, text="Sent Messages:").pack(fill=tk.X, anchor=tk.W)
-        self.sent_messages = scrolledtext.ScrolledText(messages_frame, height=10, wrap=tk.WORD)
-        self.sent_messages.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        self.sent_messages.config(state=tk.DISABLED)
-        
-        # Received messages
-        ttk.Label(messages_frame, text="Received Messages:").pack(fill=tk.X, anchor=tk.W)
-        self.received_messages = scrolledtext.ScrolledText(messages_frame, height=10, wrap=tk.WORD)
-        self.received_messages.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        self.received_messages.config(state=tk.DISABLED)
-        
-        # Manual command entry
-        command_frame = ttk.Frame(self.frame)
-        command_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        ttk.Label(command_frame, text="Command:").pack(side=tk.LEFT, padx=5)
-        self.command_entry = ttk.Entry(command_frame, width=50)
-        self.command_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        self.command_entry.bind("<Return>", self.send_command)
-        
-        self.send_btn = ttk.Button(command_frame, text="Send", command=lambda: self.send_command(None))
-        self.send_btn.pack(side=tk.LEFT, padx=5)
-        self.send_btn.config(state=tk.DISABLED)
+        # Create terminal interface using TCPTerminal
+        self.terminal = TCPTerminal(self.frame, self.app)
         
         # Scan status
         self.scan_status = ttk.Label(self.frame, text="")
@@ -89,7 +64,7 @@ class TCPSubTab:
     def scan_for_servers(self):
         """Scan the network for TCP servers"""
         if self.server_scan_thread and self.server_scan_thread.is_alive():
-            self.app.handle_message("Server scan already in progress", "status")
+            self.terminal.log_message("Server scan already in progress", "status")
             return
             
         # Clear previous results
@@ -147,14 +122,14 @@ class TCPSubTab:
             self.app.root.after(0, lambda: self.scan_btn.config(state=tk.NORMAL))
             
             if self.found_servers:
-                self.app.handle_message(f"Found {len(self.found_servers)} TCP servers", "status")
+                self.terminal.log_message(f"Found {len(self.found_servers)} TCP servers", "status")
             else:
-                self.app.handle_message("No TCP servers found", "status")
+                self.terminal.log_message("No TCP servers found", "status")
         
         except Exception as e:
             self.app.root.after(0, lambda: self.scan_status.config(text=f"Scan error: {str(e)}"))
             self.app.root.after(0, lambda: self.scan_btn.config(state=tk.NORMAL))
-            self.app.handle_message(f"Server scan error: {str(e)}", "error")
+            self.terminal.log_message(f"Server scan error: {str(e)}", "error")
     
     def update_server_list(self):
         """Update the server dropdown with found servers"""
@@ -165,7 +140,7 @@ class TCPSubTab:
     def connect_tcp(self):
         """Connect to the selected TCP server"""
         if not self.server_combo.get() and not self.port_entry.get():
-            self.app.handle_message("No server/port specified", "error")
+            self.terminal.log_message("No server/port specified", "error")
             return
             
         try:
@@ -186,7 +161,7 @@ class TCPSubTab:
             # Update UI
             self.connect_btn.config(state=tk.DISABLED)
             self.disconnect_btn.config(state=tk.NORMAL)
-            self.send_btn.config(state=tk.NORMAL)
+            self.terminal.send_btn.config(state=tk.NORMAL)
             
             # Update app's connection status
             self.app.tcp_connected = True
@@ -199,10 +174,10 @@ class TCPSubTab:
             self.reader_thread = threading.Thread(target=self.read_tcp, daemon=True)
             self.reader_thread.start()
             
-            self.app.handle_message(f"Connected to TCP server at {server}:{port}", "status")
+            self.terminal.log_message(f"Connected to TCP server at {server}:{port}", "status")
         
         except Exception as e:
-            self.app.handle_message(f"TCP connection error: {str(e)}", "error")
+            self.terminal.log_message(f"TCP connection error: {str(e)}", "error")
     
     def disconnect_tcp(self):
         """Disconnect from the TCP server"""
@@ -221,7 +196,7 @@ class TCPSubTab:
             # Update UI
             self.connect_btn.config(state=tk.NORMAL)
             self.disconnect_btn.config(state=tk.DISABLED)
-            self.send_btn.config(state=tk.DISABLED)
+            self.terminal.send_btn.config(state=tk.DISABLED)
             
             # Update app's connection status
             self.app.tcp_connected = False
@@ -229,7 +204,7 @@ class TCPSubTab:
             self.app.connection_type = None
             self.app.update_connection_status()
             
-            self.app.handle_message("TCP disconnected", "status")
+            self.terminal.log_message("TCP disconnected", "status")
     
     def read_tcp(self):
         """Background thread to read from TCP socket"""
@@ -248,9 +223,9 @@ class TCPSubTab:
                         line = line.strip()
                         if line:
                             # Process the received line
-                            self.app.handle_message(line, "tcp_received")
+                            self.terminal.log_message(line, "tcp_received")
                 elif not data:  # Connection closed by server
-                    self.app.handle_message("Connection closed by server", "status")
+                    self.terminal.log_message("Connection closed by server", "status")
                     self.running = False
                     self.app.root.after(100, self.disconnect_tcp)
                     break
@@ -262,70 +237,8 @@ class TCPSubTab:
                 # Just a timeout, continue
                 pass
             except Exception as e:
-                self.app.handle_message(f"TCP read error: {str(e)}", "error")
+                self.terminal.log_message(f"TCP read error: {str(e)}", "error")
                 # On error, break the loop and disconnect
                 self.running = False
                 self.app.root.after(100, self.disconnect_tcp)
                 break
-    
-    def send_command(self, event=None):
-        """Send a command through the TCP socket"""
-        if not self.tcp_socket:
-            self.app.handle_message("Not connected to TCP server", "error")
-            return
-            
-        command = self.command_entry.get()
-        if not command:
-            return
-            
-        # Use the app's central command sender
-        if self.app.send_command(command):
-            # Clear the entry if sent successfully
-            self.command_entry.delete(0, tk.END)
-            
-    def log_message(self, message, message_type="status"):
-        """Log message to the appropriate text area"""
-        timestamp = time.strftime("%H:%M:%S")
-        formatted_message = f"[{timestamp}] {message}\n"
-        
-        if message_type in ["serial_sent", "sent"]:
-            # Show in sent messages area
-            self.sent_messages.config(state=tk.NORMAL)
-            self.sent_messages.insert(tk.END, formatted_message)
-            self.sent_messages.see(tk.END)
-            self.sent_messages.config(state=tk.DISABLED)
-            
-        elif message_type in ["serial_received", "received"]:
-            # Show in received messages area
-            self.received_messages.config(state=tk.NORMAL)
-            self.received_messages.insert(tk.END, formatted_message)
-            self.received_messages.see(tk.END)
-            self.received_messages.config(state=tk.DISABLED)
-        
-        elif message_type == "error":
-            # Show errors in both areas with red color
-            self.sent_messages.config(state=tk.NORMAL)
-            self.sent_messages.insert(tk.END, formatted_message, "error")
-            self.sent_messages.tag_config("error", foreground="red")
-            self.sent_messages.see(tk.END)
-            self.sent_messages.config(state=tk.DISABLED)
-            
-            self.received_messages.config(state=tk.NORMAL)
-            self.received_messages.insert(tk.END, formatted_message, "error")
-            self.received_messages.tag_config("error", foreground="red")
-            self.received_messages.see(tk.END)
-            self.received_messages.config(state=tk.DISABLED)
-            
-        elif message_type in ["status", "serial_status"]:
-            # Show status messages in both areas with purple color
-            self.sent_messages.config(state=tk.NORMAL)
-            self.sent_messages.insert(tk.END, formatted_message, "status")
-            self.sent_messages.tag_config("status", foreground="purple")
-            self.sent_messages.see(tk.END)
-            self.sent_messages.config(state=tk.DISABLED)
-            
-            self.received_messages.config(state=tk.NORMAL)
-            self.received_messages.insert(tk.END, formatted_message, "status")
-            self.received_messages.tag_config("status", foreground="purple")
-            self.received_messages.see(tk.END)
-            self.received_messages.config(state=tk.DISABLED)
