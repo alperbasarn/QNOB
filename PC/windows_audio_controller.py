@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 27 06:08:19 2025
-
-@author: Alper Basaran
-"""
-
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import threading
 import time
+import tkinter as tk
 
 class WindowsAudioController:
     """Controls and monitors Windows system volume"""
@@ -22,6 +16,11 @@ class WindowsAudioController:
         self.callback = volume_callback
         self.last_volume = self.get_volume_percent()
         self.monitoring = False
+        self.root = None  # Will be set by set_root
+        
+    def set_root(self, root):
+        """Set the tkinter root for thread-safe callbacks"""
+        self.root = root
     
     def get_volume_percent(self):
         """Get current volume as percentage (0-100)"""
@@ -54,6 +53,11 @@ class WindowsAudioController:
             current_vol = self.get_volume_percent()
             if current_vol != self.last_volume:
                 if self.callback:
-                    self.callback(current_vol)
+                    # Use thread-safe method to update UI
+                    if self.root:
+                        self.root.after(0, lambda vol=current_vol: self.callback(vol))
+                    else:
+                        # If root not set, just call directly (not thread-safe for UI)
+                        self.callback(current_vol)
                 self.last_volume = current_vol
             time.sleep(0.1)  # Check every 100ms

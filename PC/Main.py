@@ -1,19 +1,23 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Mar 27 05:53:45 2025
-
-@author: Alper Basaran
+QNOB Controller Application
+Author: Alper Basaran
 """
 
 import tkinter as tk
-from sound_controller_app import SoundControllerApp
+from sound_controller_app import QNOBApp
 
 def main():
     # Initialize the root window
     root = tk.Tk()
+    root.title("QNOB Controller")
     
     # Create the application
-    app = SoundControllerApp(root)
+    app = QNOBApp(root)
+    
+    # Set up window close handler
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
     
     # Start the main event loop
     root.mainloop()

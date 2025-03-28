@@ -22,7 +22,7 @@ private:
   };
   
   // Command storage
-  Command commands[25]; // Increased to support more commands
+  Command commands[30]; // Increased to support more commands
   int commandCount = 0;
   
   // Dependencies
@@ -48,7 +48,12 @@ private:
   void cmdHelp(const String& params);
   void cmdKnobSetpoint(const String& params);
   
-  // New command handlers for server configuration
+  // EEPROM Get/Set value handlers
+  void cmdGetEEPROMValue(const String& params);
+  void cmdSetEEPROMValue(const String& params);
+  void cmdListEEPROMValues(const String& params);
+  
+  // Server configuration command handlers
   void cmdConfigureSoundTCPServer(const String& params);
   void cmdConfigureLightTCPServer(const String& params);
   void cmdConfigureSoundMQTTServer(const String& params);
@@ -56,7 +61,7 @@ private:
   void cmdCommInfo(const String& params);
   void cmdSetDeviceName(const String& params);
   
-  // New command handlers for static IP configuration
+  // Static IP configuration command handlers
   void cmdConfigureStaticIP(const String& params);
   void cmdEnableStaticIP(const String& params);
   void cmdDisableStaticIP(const String& params);
