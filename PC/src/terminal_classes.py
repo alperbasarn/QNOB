@@ -5,13 +5,6 @@ Created on Fri Mar 28 07:46:35 2025
 @author: Alper Basaran
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 28 15:30:00 2025
-
-@author: Alper Basaran
-"""
-
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 import time
@@ -23,8 +16,15 @@ class CommTerminal:
         self.parent_frame = parent_frame
         self.app = app
         
+        # Control variables
+        self.autoscroll = tk.BooleanVar(value=True)
+        self.show_timestamps = tk.BooleanVar(value=True)
+        
         # Message display areas
         self.create_message_areas()
+        
+        # Control panel for terminal options
+        self.create_control_panel()
         
         # Command entry area
         self.create_command_area()
@@ -53,6 +53,66 @@ class CommTerminal:
         self.received_messages.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.received_messages.config(state=tk.DISABLED)
     
+    def create_control_panel(self):
+        """Create control panel with buttons for terminal options"""
+        control_panel = ttk.Frame(self.parent_frame)
+        control_panel.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Autoscroll toggle
+        self.autoscroll_check = ttk.Checkbutton(
+            control_panel, 
+            text="Autoscroll", 
+            variable=self.autoscroll,
+            command=self.toggle_autoscroll
+        )
+        self.autoscroll_check.pack(side=tk.LEFT, padx=5)
+        
+        # Show/hide timestamps
+        self.timestamps_check = ttk.Checkbutton(
+            control_panel,
+            text="Show Timestamps",
+            variable=self.show_timestamps,
+            command=self.toggle_timestamps
+        )
+        self.timestamps_check.pack(side=tk.LEFT, padx=5)
+        
+        # Clear buttons for each message area
+        ttk.Button(
+            control_panel,
+            text="Clear Info",
+            command=lambda: self.clear_messages("info")
+        ).pack(side=tk.RIGHT, padx=2)
+        
+        ttk.Button(
+            control_panel,
+            text="Clear Received",
+            command=lambda: self.clear_messages("received")
+        ).pack(side=tk.RIGHT, padx=2)
+        
+        ttk.Button(
+            control_panel,
+            text="Clear Sent",
+            command=lambda: self.clear_messages("sent")
+        ).pack(side=tk.RIGHT, padx=2)
+        
+        ttk.Button(
+            control_panel,
+            text="Clear All",
+            command=lambda: self.clear_messages("all")
+        ).pack(side=tk.RIGHT, padx=2)
+    
+    def toggle_autoscroll(self):
+        """Toggle autoscroll feature"""
+        # The BooleanVar handles the state
+        pass
+    
+    def toggle_timestamps(self):
+        """Toggle showing timestamps in messages"""
+        # Refresh existing messages to apply changes
+        # This would require storing messages without timestamps and reapplying
+        # For now, just apply to new messages
+        pass
+    
     def create_command_area(self):
         """Create command entry area"""
         command_frame = ttk.Frame(self.parent_frame)
@@ -76,8 +136,12 @@ class CommTerminal:
     
     def log_message(self, message, message_type="status"):
         """Log a message to the appropriate text area"""
-        timestamp = time.strftime("%H:%M:%S")
-        formatted_message = f"[{timestamp}] {message}\n"
+        # Format message with timestamp if enabled
+        if self.show_timestamps.get():
+            timestamp = time.strftime("%H:%M:%S")
+            formatted_message = f"[{timestamp}] {message}\n"
+        else:
+            formatted_message = f"{message}\n"
         
         # Determine which text area to use
         if message_type in ["sent", "serial_sent", "tcp_sent", "mqtt_sent"]:
@@ -100,7 +164,10 @@ class CommTerminal:
         else:
             text_area.insert(tk.END, formatted_message)
         
-        text_area.see(tk.END)
+        # Scroll to end if autoscroll is enabled
+        if self.autoscroll.get():
+            text_area.see(tk.END)
+            
         text_area.config(state=tk.DISABLED)
     
     def clear_messages(self, message_area="all"):
