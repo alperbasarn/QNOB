@@ -1,8 +1,8 @@
 #include "LightController.h"
 
 // Constructor
-LightController::LightController(Arduino_GFX* graphics, TouchPanel* touch, WiFiTCPClient* client, KnobController* knob)
-  : gfx(graphics), touchPanel(touch), tcpClient(client), knob(knob), setpoint(50), lastSetpoint(-1),
+LightController::LightController(Arduino_GFX* graphics, TouchPanel* touch, MQTTHandler* mqttHandler)
+  : gfx(graphics), touchPanel(touch), mqttHandler(mqttHandler), setpoint(50), lastSetpoint(-1),
     lastSentSetpoint(-1), lastSentColor(0), initialized(false), pageBackRequested(false), waterLevel(50), colorHue(0.5f),
     lastWaterLevel(-1), lastColorHue(-1), lastColorChangeTime(0), lastWaterLevelSentTime(0), lastSetPointDrawnTime(0),
     lastScreenUpdateTime(0), firstTouchX(-1), firstTouchY(-1), currentMode(STATIC), modeChangeRequested(false) {
@@ -105,10 +105,12 @@ void LightController::updateScreen() {
   }
   
   // Ask the knob for updated setpoint information
+  /*
   if (knob && millis() > lastSetpointQueryTime + 10) {
     knob->askSetpoint();
     lastSetpointQueryTime = millis();
   }
+  */
 }
 
 void LightController::checkTouchInput() {
@@ -159,8 +161,8 @@ void LightController::checkTouchInput() {
 }
 
 void LightController::sendSetpointToServer() {
-  // Make sure MQTT is configured
-  if (!tcpClient || !tcpClient->hasLightMQTTConfigured()) {
+  // Make sure MQTT is configured and the handler exists
+  if (!mqttHandler || !mqttHandler->hasLightMQTTConfigured()) {
     Serial.println("Light MQTT not configured, skipping setpoint send");
     return;
   }
@@ -185,9 +187,12 @@ void LightController::sendSetpointToServer() {
     case RAINBOW: modeMessage = "rainbow"; break;
   }
 
-  tcpClient->sendMQTTMessage("ledRing/colorControl", colorMessage);
-  tcpClient->sendMQTTMessage("ledRing/brightnessControl", brightnessMessage);
-  tcpClient->sendMQTTMessage("ledRing/modeControl", modeMessage);
+  // Send messages only if handler exists
+  if (mqttHandler) {
+    mqttHandler->sendMQTTMessage("ledRing/colorControl", colorMessage);
+    mqttHandler->sendMQTTMessage("ledRing/brightnessControl", brightnessMessage);
+    mqttHandler->sendMQTTMessage("ledRing/modeControl", modeMessage);
+  }
 }
 
 void LightController::drawStaticElements() {
@@ -200,20 +205,22 @@ void LightController::drawStaticElements() {
 }
 
 void LightController::requestCurrentBrightnessFromServer() {
-  // Check if MQTT is configured
-  if (tcpClient && tcpClient->hasLightMQTTConfigured()) {
+  // Check if MQTT is configured and handler exists
+  if (mqttHandler && mqttHandler->hasLightMQTTConfigured()) {
     // Use MQTT to request current brightness
-    tcpClient->sendMQTTMessage("esp32/light/get_brightness", "");
+    mqttHandler->sendMQTTMessage("esp32/light/get_brightness", "");
     Serial.println("Sent brightness request via MQTT.");
   } else {
     Serial.println("Light MQTT not configured, using default brightness");
   }
   
   // Default to current value until we receive a response via MQTT callback
+  /*
   String setpointString = "setpoint=" + String(waterLevel);
   if (knob) {
     knob->sendCommand(setpointString);
   }
+  */
 }
 
 bool LightController::isPageBackRequested() const {
@@ -249,9 +256,9 @@ void LightController::drawModeText() {
   gfx->fillTriangle(screenWidth - 10, screenHeight - 20, screenWidth - 30, screenHeight - 40, screenWidth - 30, screenHeight - 10, WHITE);  // Forward button
 }
 
-// Add this implementation to LightController.cpp
-void LightController::setTCPClient(WiFiTCPClient* client) {
-  tcpClient = client;
+// Update MQTT handler
+void LightController::setMQTTHandler(MQTTHandler* handler) {
+  mqttHandler = handler;
 }
 
 void LightController::handleModeChange() {

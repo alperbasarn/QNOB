@@ -2,7 +2,8 @@
 
 MQTTHandler::MQTTHandler(WiFiHandler* wifiHdlr, EEPROMManager* eepromMgr)
   : wifiHandler(wifiHdlr), eepromManager(eepromMgr), mqttClient(wifiClient),
-    mqtt_port(8883), lastMQTTSentTime(0), lastMQTTConnectAttempt(0), useLightConfig(false) {
+    mqtt_port(8883), lastMQTTSentTime(0), lastMQTTConnectAttempt(0), useLightConfig(false),
+    soundMessage(""), hasSoundMessage(false) {
   
   mqtt_broker = "";
   mqtt_username = "";
@@ -43,6 +44,33 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
   
   Serial.println("📩 Message Content: " + String(messageBuffer));
 
+  // Get the device name for sender ID comparison
+  String deviceName = (eepromManager && !eepromManager->deviceName.isEmpty()) 
+                     ? eepromManager->deviceName
+                     : "ESP32"; // Default name
+
+  // Check if this message is from myself (contains our sender ID)
+  String senderPrefix = "sender=" + deviceName + ",";
+  if (String(messageBuffer).startsWith(senderPrefix)) {
+    Serial.println("Ignoring message from self");
+    return;
+  }
+
+  // Check for sound-related topics
+  if (String(topic) == "esp32/sound/control" || String(topic).startsWith("esp32/sound/")) {
+    // Parse and extract the actual message content (remove sender ID if present)
+    String receivedMessage = String(messageBuffer);
+    if (receivedMessage.indexOf("sender=") >= 0 && receivedMessage.indexOf(',') >= 0) {
+      // Extract the part after the first comma
+      receivedMessage = receivedMessage.substring(receivedMessage.indexOf(',') + 1);
+    }
+    
+    // Store the processed sound message
+    soundMessage = receivedMessage;
+    hasSoundMessage = true;
+    Serial.println("Sound message received: " + soundMessage);
+  }
+  
   // Handle specific topics
   if (String(topic) == "esp32/light/brightness") {
     int brightness = atoi(messageBuffer);
@@ -116,7 +144,6 @@ void MQTTHandler::initializeMQTT(bool useLightConfig) {
   mqttClient.setServer(mqtt_broker.c_str(), mqtt_port);
   
   Serial.println("MQTT client initialized successfully");
-  
 }
 
 bool MQTTHandler::connectToMQTTServer() {
@@ -212,11 +239,9 @@ bool MQTTHandler::connectToMQTTServer() {
   Serial.println("\n✅ Successfully connected to MQTT Broker!");
   connecting = false;
   // Subscribe to topics
-  mqttClient.subscribe("ledRing/modeControl");
-  mqttClient.subscribe("esp32/ledRing/configure");
-  mqttClient.subscribe("ledRing/brightnessControl");
-  mqttClient.subscribe("ledRing/colorControl");
   mqttClient.subscribe("esp32/sound/control");
+  mqttClient.subscribe("esp32/sound/setpoint");
+  mqttClient.subscribe("esp32/sound/response");
   
   Serial.println("📩 Subscribed to MQTT topics");
   initialized = true;
@@ -234,14 +259,28 @@ void MQTTHandler::sendMQTTMessage(const char* topic, const String& message) {
     return;
   }
 
+  // Get device name for sender ID
+  String deviceNameStr = "QNOB";
+  if (eepromManager && !eepromManager->deviceName.isEmpty()) {
+    deviceNameStr = eepromManager->deviceName;
+  }
+
+  // Add sender ID to the message if not already there
+  String fullMessage;
+  if (!message.startsWith("sender=")) {
+    fullMessage = "sender=" + deviceNameStr + "," + message;
+  } else {
+    fullMessage = message;
+  }
+
   unsigned long currentMillis = millis();
   if (mqttClient.connected() && (currentMillis - lastMQTTSentTime >= 100)) {
     // Convert message to char array
     char messageBuffer[256] = {0};
-    if (message.length() < sizeof(messageBuffer) - 1) {
-      message.toCharArray(messageBuffer, sizeof(messageBuffer));
+    if (fullMessage.length() < sizeof(messageBuffer) - 1) {
+      fullMessage.toCharArray(messageBuffer, sizeof(messageBuffer));
       mqttClient.publish(topic, messageBuffer);
-      Serial.println("📤 Sent MQTT message on topic [" + String(topic) + "]: " + message);
+      Serial.println("📤 Sent MQTT message on topic [" + String(topic) + "]: " + fullMessage);
       lastMQTTSentTime = currentMillis;
     } else {
       Serial.println("⚠️ MQTT message too long (max 255 chars)");
@@ -264,6 +303,20 @@ bool MQTTHandler::hasLightMQTTConfigured() {
 
 bool MQTTHandler::isMQTTConnected() {
   return wifiHandler->isInternetAvailable() && mqttClient.connected();
+}
+
+// New method to check for sound messages
+bool MQTTHandler::getHasSoundMessage() {
+  if (hasSoundMessage) {
+    hasSoundMessage = false; // Reset the flag after checking
+    return true;
+  }
+  return false;
+}
+
+// New method to get the sound message content
+String MQTTHandler::getSoundMessage() {
+  return soundMessage;
 }
 
 void MQTTHandler::update() {

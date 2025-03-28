@@ -9,8 +9,12 @@ DisplayController::DisplayController(Arduino_GFX* graphics, int sda, int scl, in
   // Initialize touch panel first
   touchPanel = new TouchPanel(sda, scl, rst, irq);
 
-  // Create all controllers
-  soundController = new SoundController(gfx, touchPanel, tcpClient);
+  // Create all controllers - use the MQTTHandler from WiFiTCPClient
+  // Now that we have the knob controller, we can initialize the light controller
+  // Pass nullptr for MQTTHandler if tcpClient is nullptr
+  MQTTHandler* mqttHandler = (tcpClient != nullptr) ? tcpClient->getMQTTHandler() : nullptr;
+  lightController = new LightController(gfx, touchPanel, mqttHandler);
+  soundController = new SoundController(gfx, touchPanel, mqttHandler);
   modeController = new ModeController(gfx, touchPanel, tcpClient);
   initializationScreen = new InitializationScreen(gfx);
   infoScreen = new InfoScreen(gfx, touchPanel, tcpClient);
@@ -37,18 +41,22 @@ void DisplayController::initScreen() {
 
 void DisplayController::registerKnobController(KnobController* knob) {
   knobController = knob;
-  // Now that we have the knob controller, we can initialize the light controller
-  lightController = new LightController(gfx, touchPanel, tcpClient, knobController);
 }
 
 void DisplayController::setTCPClient(WiFiTCPClient* client) {
   tcpClient = client;
 
-  // Update client reference in all controllers that need it
-  if (soundController) soundController->setTCPClient(client);
+  // Update TCP client in controllers that use it directly
   if (modeController) modeController->setTCPClient(client);
-  if (lightController) lightController->setTCPClient(client);
   if (infoScreen) infoScreen->setTCPClient(client);
+
+  // Update MQTTHandler in controllers that use it directly
+  // First check if client is valid to avoid null dereference
+  if (client) {
+    MQTTHandler* mqttHandler = client->getMQTTHandler();
+    if (soundController) soundController->setMQTTHandler(mqttHandler);
+    if (lightController) lightController->setMQTTHandler(mqttHandler);
+  }
 }
 
 void DisplayController::updateInitProgress(int progress) {
@@ -154,7 +162,7 @@ void DisplayController::checkActivityAndAutoSwitch() {
   }
 
   // If inactive for 10 seconds from any mode, switch to info mode
-  if (currentMillis - lastActivityTime >= 10000) {
+  if (currentMillis - lastActivityTime >= 20000) {
     setMode(INFO);
     if (infoScreen) {
       infoScreen->resetLastActivityTime();
@@ -274,8 +282,8 @@ void DisplayController::update() {
               modeController->setActive(false);
               if (tcpClient) {
                 if (tcpClient->hasSoundMQTTConfigured()) {
-                  tcpClient->initializeMQTT();
-                  tcpClient->connectToMQTTServer();
+                  tcpClient->getMQTTHandler()->initializeMQTT(false);  // Initialize with sound configuration
+                  tcpClient->getMQTTHandler()->connectToMQTTServer();
                 } else {
                   Serial.println("Sound MQTT not configured, skipping connection");
                 }
@@ -290,8 +298,8 @@ void DisplayController::update() {
               modeController->setActive(false);
               if (tcpClient) {
                 if (tcpClient->hasLightMQTTConfigured()) {
-                  tcpClient->initializeMQTT();
-                  tcpClient->connectToMQTTServer();
+                  tcpClient->getMQTTHandler()->initializeMQTT(true);  // Initialize with light configuration
+                  tcpClient->getMQTTHandler()->connectToMQTTServer();
                 } else {
                   Serial.println("Light MQTT not configured, skipping connection");
                 }

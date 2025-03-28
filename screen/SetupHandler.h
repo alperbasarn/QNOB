@@ -17,8 +17,8 @@
 #define DISPLAY_CORE 0  // Core 0 for display and other operations (lower priority)
 
 // Task priorities
-#define NETWORK_TASK_PRIORITY 2  // Higher priority for network operations
-#define DISPLAY_TASK_PRIORITY 1  // Lower priority for display operations
+#define NETWORK_TASK_PRIORITY 1  // Higher priority for network operations
+#define DISPLAY_TASK_PRIORITY 2  // Lower priority for display operations
 #define INIT_TASK_PRIORITY 3     // Highest priority for initialization
 
 // Task stack sizes

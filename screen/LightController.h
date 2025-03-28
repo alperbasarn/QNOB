@@ -3,16 +3,14 @@
 
 #include <Arduino_GFX_Library.h>
 #include "TouchPanel.h"
-#include "WiFiTCPClient.h"
-#include "KnobController.h"
+#include "MQTTHandler.h"
 
 class LightController {
 private:
   // Member variables
   Arduino_GFX* gfx;          // Pointer to the graphics object
   TouchPanel* touchPanel;    // Pointer to the touch screen object
-  WiFiTCPClient* tcpClient;  // Pointer to the TCP client
-  KnobController* knob;
+  MQTTHandler* mqttHandler;  // Pointer to the MQTT handler
   int setpoint;                          // Current light setpoint (0-100)
   int lastSetpoint;                      // Last drawn setpoint
   int lastSentSetpoint;                  // Last setpoint sent to the server
@@ -53,7 +51,7 @@ private:
 
 public:
   // Constructor
-  LightController(Arduino_GFX* graphics, TouchPanel* touch, WiFiTCPClient* client, KnobController* knob);
+  LightController(Arduino_GFX* graphics, TouchPanel* touch, MQTTHandler* mqttHandler);
 
   // Public methods
   void updateScreen();               // Update the screen with the current state
@@ -62,10 +60,7 @@ public:
   void decrementSetpoint();          // Decrement the water level
   bool isPageBackRequested() const;  // Check if a page-back request has been made
   void resetPageBackRequest();       // Reset the page-back request flag
-  void setTCPClient(WiFiTCPClient* client); // Add method to update TCP client
-  
-  // Set knob controller
-  void setKnobController(KnobController* newKnob) { knob = newKnob; }
+  void setMQTTHandler(MQTTHandler* handler); // Update MQTT handler
 };
 
 #endif  // LIGHT_CONTROLLER_H

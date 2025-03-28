@@ -44,7 +44,7 @@ void SleepHandler::setInactivityTimeout(unsigned long timeoutMs) {
 
 void SleepHandler::resetActivityTime() {
   lastActivityTime = millis();
-  Serial.println("Sleep timer reset");
+  //Serial.println("Sleep timer reset");
 }
 
 void SleepHandler::enable() {

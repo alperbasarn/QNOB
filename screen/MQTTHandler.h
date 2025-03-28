@@ -20,6 +20,7 @@ private:
   WiFiClientSecure wifiClient;         // Secure WiFi client for MQTT
   PubSubClient mqttClient;             // MQTT client object
   bool connecting = false;
+  
   // MQTT Configuration
   String mqtt_broker;
   int mqtt_port;
@@ -27,9 +28,14 @@ private:
   String mqtt_password;
   bool useLightConfig = false;         // Whether using light or sound MQTT config
   bool initialized=false;
+  
   // Operation tracking
   unsigned long lastMQTTSentTime = 0;
   unsigned long lastMQTTConnectAttempt = 0;
+  
+  // Sound message handling
+  String soundMessage;                 // Latest sound message content
+  bool hasSoundMessage = false;        // Flag for new sound message
   
   // Helper methods
   void logMQTTState(int state);        // Log MQTT connection state
@@ -47,6 +53,11 @@ public:
   bool connectToMQTTServer();          // Connect to MQTT broker
   void sendMQTTMessage(const char* topic, const String& message); // Send MQTT message
   bool isMQTTConnected();              // Check if MQTT is connected
+  
+  // Sound message methods
+  bool getHasSoundMessage();           // Check if a new sound message is available (resets flag)
+  String getSoundMessage();            // Get the content of the sound message
+  String name;
   
   // Configuration check methods
   bool hasSoundMQTTConfigured();       // Check if Sound MQTT is configured

@@ -26,14 +26,14 @@ void TouchPanel::handleTouchPanel() {
         pressed = true;
         released = false;
         pressTime = currentTime;
-        Serial.println("Pressed");
+        //Serial.println("Pressed");
       } else if (!hold && currentTime - pressTime > holdThreshold) {
         if (!longHold && currentTime - pressTime > longHoldThreshold) {
           longHold = true;
-          Serial.println("long hold");
+          //Serial.println("long hold");
         }
         hold = true;
-        Serial.println("Hold");
+        //Serial.println("Hold");
       }
     } else {
       firstPress = false;
@@ -56,7 +56,7 @@ void TouchPanel::handleTouchPanel() {
       else {
         released = true;
         hasNewRelease = true;
-        Serial.println("Released");
+        //Serial.println("Released");
       }
     }
   }

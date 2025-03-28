@@ -4,8 +4,8 @@
 // Core definitions from SetupHandler.h
 #define NETWORK_CORE 1
 #define DISPLAY_CORE 0
-#define NETWORK_TASK_PRIORITY 2
-#define DISPLAY_TASK_PRIORITY 1
+#define NETWORK_TASK_PRIORITY 1
+#define DISPLAY_TASK_PRIORITY 2
 #define NETWORK_STACK_SIZE 8192
 #define DISPLAY_STACK_SIZE 8192
 
@@ -13,8 +13,6 @@
 void displayTask_func(void* parameter) {
   Serial.println("[Display Task] Starting on core " + String(xPortGetCoreID()));
 
-  // Small delay to ensure everything is initialized
-  vTaskDelay(100 / portTICK_PERIOD_MS);
 
   // Track if we're in power save mode
   bool localPowerSaveMode = false;
@@ -48,7 +46,7 @@ void displayTask_func(void* parameter) {
       vTaskDelay(300 / portTICK_PERIOD_MS);
     } else {
       // Normal delay - 10ms
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+      vTaskDelay(5 / portTICK_PERIOD_MS);
     }
   }
 }
@@ -57,7 +55,7 @@ void networkTask_func(void* parameter) {
   Serial.println("[Network Task] Starting on core " + String(xPortGetCoreID()));
 
   // Small delay to ensure everything is initialized
-  vTaskDelay(100 / portTICK_PERIOD_MS);
+  //vTaskDelay(100 / portTICK_PERIOD_MS);
 
   unsigned long lastMemCheckTime = 0;
   bool localPowerSaveMode = false;
