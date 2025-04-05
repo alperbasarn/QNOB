@@ -14,15 +14,17 @@ class ConfigureTab:
     def __init__(self, notebook, app):
         self.app = app
         self.frame = ttk.Frame(notebook)
-        
+        self.loading = False 
         # Dictionary to track EEPROM values
         self.eeprom_values = {}
         self.original_values = {}
         self.eeprom_fields = {}
         self.modified = False
+        self.loading = False  # Add a loading flag to prevent multiple requests
         
         # Create UI elements
         self.create_ui()
+
     
     def create_ui(self):
         # Top frame for load/save buttons
@@ -112,27 +114,27 @@ class ConfigureTab:
         self.eeprom_fields[key] = {"widget": field, "type": value_type}
         
         return field
-    
+        
     def load_configuration(self):
         """Request configuration from the device"""
         if not self.app.serial_connected and not self.app.tcp_connected:
             messagebox.showerror("Error", "Not connected to a device")
             return
         
+        # Prevent multiple loads
+        if self.loading:
+            return
+        
+        self.loading = True
+        
         # Clear any existing fields first
         self.clear_fields()
         
-        # Request EEPROM data from device
-        self.app.send_command("showNetworks")
-        self.app.send_command("commInfo")
-        self.app.send_command("showStaticIP")
+        # Request EEPROM values using listEEPROMValues command
+        self.app.send_command("listEEPROMValues")
         
         # Update status
         self.status_label.config(text="Requested configuration from device")
-        
-        # Dummy data for testing UI - will be replaced with actual data
-        # self.populate_test_data()
-    
     def clear_fields(self):
         """Clear all configuration fields"""
         # Clear existing fields from the frames
@@ -199,20 +201,21 @@ class ConfigureTab:
             
             # Store the value
             self.eeprom_values[key] = value
-    
+        
     def process_command_response(self, response):
         """Process a configuration response from the device"""
-        # Different response formats require different parsing
-        
-        # WiFi Networks response
-        if "WiFi Networks:" in response:
-            match = re.search(r"Slot (\d+): (.+)", response)
-            if match:
-                slot = match.group(1)
-                data = match.group(2)
+        # Check if this is a response to listEEPROMValues command
+        if "=" in response:
+            # Parse key=value pairs
+            key_value = response.split('=', 1)
+            if len(key_value) == 2:
+                key = key_value[0].strip()
+                value = key_value[1].strip()
                 
-                if "Not Set" in data:
-                    # Empty slot
+                # Process based on key type
+                if key.startswith("wifi") and key.endswith("_ssid"):
+                    # Handle WiFi SSID
+                    slot = key[4:5]  # Extract slot number
                     ssid_key = f"wifi{slot}_ssid"
                     pass_key = f"wifi{slot}_password"
                     
@@ -221,159 +224,124 @@ class ConfigureTab:
                     if pass_key not in self.eeprom_fields:
                         self.create_field(self.wifi_frame, f"WiFi Password (Slot {slot}):", pass_key, int(slot)*2+1)
                     
-                    self.update_field_value(ssid_key, "")
-                    self.update_field_value(pass_key, "")
-                else:
-                    # Slot with SSID
-                    ssid_match = re.search(r"SSID: (.+)", data)
-                    if ssid_match:
-                        ssid = ssid_match.group(1)
-                        ssid_key = f"wifi{slot}_ssid"
-                        pass_key = f"wifi{slot}_password"
-                        
-                        if ssid_key not in self.eeprom_fields:
-                            self.create_field(self.wifi_frame, f"WiFi SSID (Slot {slot}):", ssid_key, int(slot)*2)
-                        if pass_key not in self.eeprom_fields:
-                            self.create_field(self.wifi_frame, f"WiFi Password (Slot {slot}):", pass_key, int(slot)*2+1)
-                        
-                        self.update_field_value(ssid_key, ssid)
-                        # Password is not readable, just set a placeholder
-                        self.update_field_value(pass_key, "********")
-        
-        # Last Used slot
-        elif "Last Used:" in response:
-            match = re.search(r"Last Used: (\d+)", response)
-            if match:
-                slot = match.group(1)
-                slot_key = "last_wifi_slot"
-                
-                if slot_key not in self.eeprom_fields:
-                    self.create_field(self.wifi_frame, "Last Used WiFi Slot:", slot_key, 6, 
-                                     value_type="dropdown", options=["0", "1", "2"])
-                
-                self.update_field_value(slot_key, slot)
-        
-        # MQTT Server configurations
-        elif "MQTT Server:" in response:
-            if "Sound MQTT Server:" in response:
-                # Parse Sound MQTT settings
-                url_match = re.search(r"URL: (.+)", response)
-                port_match = re.search(r"Port: (\d+)", response)
-                username_match = re.search(r"Username: (.+)", response)
-                
-                if url_match:
-                    key = "sound_mqtt_url"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Sound MQTT URL:", key, 0)
-                    self.update_field_value(key, url_match.group(1).strip())
-                
-                if port_match:
-                    key = "sound_mqtt_port"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Sound MQTT Port:", key, 1)
-                    self.update_field_value(key, port_match.group(1).strip())
-                
-                if username_match:
-                    key = "sound_mqtt_username"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Sound MQTT Username:", key, 2)
-                    self.update_field_value(key, username_match.group(1).strip())
+                    self.update_field_value(ssid_key, value)
                     
-                    # Add password field (value won't be read from device)
-                    key = "sound_mqtt_password"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Sound MQTT Password:", key, 3)
+                elif key.startswith("wifi") and key.endswith("_password"):
+                    # Handle WiFi password
                     self.update_field_value(key, "********")
-            
-            elif "Light MQTT Server:" in response:
-                # Parse Light MQTT settings
-                url_match = re.search(r"URL: (.+)", response)
-                port_match = re.search(r"Port: (\d+)", response)
-                username_match = re.search(r"Username: (.+)", response)
                 
-                if url_match:
-                    key = "light_mqtt_url"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Light MQTT URL:", key, 4)
-                    self.update_field_value(key, url_match.group(1).strip())
-                
-                if port_match:
-                    key = "light_mqtt_port"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Light MQTT Port:", key, 5)
-                    self.update_field_value(key, port_match.group(1).strip())
-                
-                if username_match:
-                    key = "light_mqtt_username"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Light MQTT Username:", key, 6)
-                    self.update_field_value(key, username_match.group(1).strip())
+                elif key == "lastConnectedNetwork":
+                    # Handle last connected WiFi slot
+                    slot_key = "last_wifi_slot"
                     
-                    # Add password field (value won't be read from device)
-                    key = "light_mqtt_password"
-                    if key not in self.eeprom_fields:
-                        self.create_field(self.mqtt_frame, "Light MQTT Password:", key, 7)
-                    self.update_field_value(key, "********")
-        
-        # Static IP configuration
-        elif "Static IP Configuration:" in response:
-            enabled_match = re.search(r"Enabled: (.+)", response)
-            ip_match = re.search(r"IP: (.+)", response)
-            gateway_match = re.search(r"Gateway: (.+)", response)
-            subnet_match = re.search(r"Subnet: (.+)", response)
-            dns1_match = re.search(r"DNS1: (.+)", response)
-            dns2_match = re.search(r"DNS2: (.+)", response)
-            
-            if enabled_match:
-                key = "static_ip_enabled"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Static IP Enabled:", key, 0, value_type="boolean")
-                self.update_field_value(key, enabled_match.group(1))
-            
-            if ip_match:
-                key = "static_ip"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Static IP:", key, 1)
-                self.update_field_value(key, ip_match.group(1).strip())
-            
-            if gateway_match:
-                key = "static_gateway"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Static Gateway:", key, 2)
-                self.update_field_value(key, gateway_match.group(1).strip())
-            
-            if subnet_match:
-                key = "static_subnet"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Static Subnet Mask:", key, 3)
-                self.update_field_value(key, subnet_match.group(1).strip())
-            
-            if dns1_match:
-                key = "static_dns1"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Static DNS 1:", key, 4)
-                self.update_field_value(key, dns1_match.group(1).strip())
-            
-            if dns2_match:
-                key = "static_dns2"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Static DNS 2:", key, 5)
-                self.update_field_value(key, dns2_match.group(1).strip())
-        
-        # Device name
-        elif "Device Name:" in response:
-            match = re.search(r"Device Name: (.+)", response)
-            if match:
-                key = "device_name"
-                if key not in self.eeprom_fields:
-                    self.create_field(self.device_frame, "Device Name:", key, 6)
-                self.update_field_value(key, match.group(1).strip())
-        
-        # After processing, store original values
-        if not self.original_values:
+                    if slot_key not in self.eeprom_fields:
+                        self.create_field(self.wifi_frame, "Last Used WiFi Slot:", slot_key, 6, 
+                                         value_type="dropdown", options=["0", "1", "2"])
+                    
+                    self.update_field_value(slot_key, value)
+                
+                elif key == "deviceName":
+                    # Handle device name
+                    device_key = "device_name"
+                    if device_key not in self.eeprom_fields:
+                        self.create_field(self.device_frame, "Device Name:", device_key, 0)
+                    self.update_field_value(device_key, value)
+                
+                elif key.startswith("sound") and key.endswith("URL"):
+                    # Handle Sound MQTT URL
+                    mqtt_key = "sound_mqtt_url"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Sound MQTT URL:", mqtt_key, 0)
+                    self.update_field_value(mqtt_key, value)
+                
+                elif key.startswith("sound") and key.endswith("Port"):
+                    # Handle Sound MQTT Port
+                    mqtt_key = "sound_mqtt_port" 
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Sound MQTT Port:", mqtt_key, 1)
+                    self.update_field_value(mqtt_key, value)
+                
+                elif key.startswith("sound") and key.endswith("Username"):
+                    # Handle Sound MQTT Username
+                    mqtt_key = "sound_mqtt_username"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Sound MQTT Username:", mqtt_key, 2)
+                    self.update_field_value(mqtt_key, value)
+                
+                elif key.startswith("sound") and key.endswith("Password"):
+                    # Handle Sound MQTT Password (masked)
+                    mqtt_key = "sound_mqtt_password"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Sound MQTT Password:", mqtt_key, 3)
+                    self.update_field_value(mqtt_key, "********")
+                
+                elif key.startswith("light") and key.endswith("URL"):
+                    # Handle Light MQTT URL
+                    mqtt_key = "light_mqtt_url"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Light MQTT URL:", mqtt_key, 4)
+                    self.update_field_value(mqtt_key, value)
+                
+                elif key.startswith("light") and key.endswith("Port"):
+                    # Handle Light MQTT Port
+                    mqtt_key = "light_mqtt_port"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Light MQTT Port:", mqtt_key, 5)
+                    self.update_field_value(mqtt_key, value)
+                
+                elif key.startswith("light") and key.endswith("Username"):
+                    # Handle Light MQTT Username
+                    mqtt_key = "light_mqtt_username"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Light MQTT Username:", mqtt_key, 6)
+                    self.update_field_value(mqtt_key, value)
+                
+                elif key.startswith("light") and key.endswith("Password"):
+                    # Handle Light MQTT Password (masked)
+                    mqtt_key = "light_mqtt_password"
+                    if mqtt_key not in self.eeprom_fields:
+                        self.create_field(self.mqtt_frame, "Light MQTT Password:", mqtt_key, 7)
+                    self.update_field_value(mqtt_key, "********")
+                
+                elif key == "staticIPEnabled":
+                    # Handle Static IP Enabled flag
+                    ip_key = "static_ip_enabled"
+                    if ip_key not in self.eeprom_fields:
+                        self.create_field(self.device_frame, "Static IP Enabled:", ip_key, 6, value_type="boolean")
+                    self.update_field_value(ip_key, value)
+                
+                elif key == "staticIP":
+                    # Handle Static IP
+                    ip_key = "static_ip"
+                    if ip_key not in self.eeprom_fields:
+                        self.create_field(self.device_frame, "Static IP:", ip_key, 7)
+                    self.update_field_value(ip_key, value)
+                
+                elif key == "staticGateway":
+                    # Handle Static Gateway
+                    ip_key = "static_gateway"
+                    if ip_key not in self.eeprom_fields:
+                        self.create_field(self.device_frame, "Static Gateway:", ip_key, 8)
+                    self.update_field_value(ip_key, value)
+                
+                elif key == "staticSubnet":
+                    # Handle Static Subnet
+                    ip_key = "static_subnet"
+                    if ip_key not in self.eeprom_fields:
+                        self.create_field(self.device_frame, "Static Subnet Mask:", ip_key, 9)
+                    self.update_field_value(ip_key, value)
+                
+        # Check if we're at the end of the EEPROM values list
+        elif "End of EEPROM Values" in response:
+            # Store original values for comparison when saving
             self.original_values = self.eeprom_values.copy()
             self.status_label.config(text="Configuration loaded successfully")
-    
+            
+            # Reset loading flag
+            self.loading = False
+            
+            # Force the UI to update
+            self.frame.update()
     def value_changed(self, key):
         """Handle when a field value changes"""
         # Get current value

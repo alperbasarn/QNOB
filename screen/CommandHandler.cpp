@@ -21,7 +21,7 @@ void CommandHandler::initialize() {
   commands[commandCount++] = { "showNetworks", &CommandHandler::cmdShowNetworks, "Show stored Wi-Fi networks" };
   commands[commandCount++] = { "calibrateOrientation", &CommandHandler::cmdCalibrateOrientation, "Calibrate device orientation" };
   commands[commandCount++] = { "setpoint", &CommandHandler::cmdKnobSetpoint, "Set the setpoint value" };
-
+  commands[commandCount++] = { "getDeviceName", &CommandHandler::cmdGetDeviceName, "Get the device name" };
   // Register EEPROM configuration commands
   commands[commandCount++] = { "getEEPROMValue", &CommandHandler::cmdGetEEPROMValue, "getEEPROMValue:key - Get value from EEPROM by key" };
   commands[commandCount++] = { "setEEPROMValue", &CommandHandler::cmdSetEEPROMValue, "setEEPROMValue:key:value - Set value in EEPROM by key" };
@@ -34,13 +34,13 @@ void CommandHandler::initialize() {
   commands[commandCount++] = { "configureLightMQTTServer", &CommandHandler::cmdConfigureLightMQTTServer, "configureLightMQTTServer:URL:Port:Username:Password - Configure Light MQTT Server" };
   commands[commandCount++] = { "commInfo", &CommandHandler::cmdCommInfo, "Display all communication configuration information" };
   commands[commandCount++] = { "setDeviceName", &CommandHandler::cmdSetDeviceName, "setDeviceName:name - Set device name" };
-  
+
   // Register static IP configuration commands
   commands[commandCount++] = { "configureStaticIP", &CommandHandler::cmdConfigureStaticIP, "configureStaticIP:IP:Gateway:Subnet:DNS1:DNS2 - Configure static IP settings" };
   commands[commandCount++] = { "enableStaticIP", &CommandHandler::cmdEnableStaticIP, "Enable static IP configuration" };
   commands[commandCount++] = { "disableStaticIP", &CommandHandler::cmdDisableStaticIP, "Disable static IP configuration (use DHCP)" };
   commands[commandCount++] = { "showStaticIP", &CommandHandler::cmdShowStaticIP, "Show current static IP configuration" };
-  
+
   commands[commandCount++] = { "help", &CommandHandler::cmdHelp, "Show available commands" };
 
   Serial.println("Serial interface initialized.");
@@ -53,29 +53,29 @@ void CommandHandler::registerKnobController(KnobController* kc) {
 // Replace the update() method in CommandHandler.cpp with this optimized version
 void CommandHandler::update() {
   hasNewMessage = false;
-  
+
   // Process one source per cycle rather than all at once
   static uint8_t sourceIndex = 0;
-  
+
   // Round-robin check different command sources
   switch (sourceIndex) {
-    case 0: // PC Serial
+    case 0:  // PC Serial
       if (Serial.available()) {
         commandFromPC = "";
         hasNewMessage = true;
-        
+
         // Read only up to a newline or a maximum of bytes
         int bytesRead = 0;
         const int MAX_BYTES = 64;
-        
+
         while (Serial.available() && bytesRead < MAX_BYTES) {
           char c = Serial.read();
           bytesRead++;
-          
+
           if (c == '\n') break;  // End of command
           commandFromPC += c;
         }
-        
+
         if (commandFromPC.length() > 0) {
           // Extract command name and parameters
           String cmdName;
@@ -105,16 +105,16 @@ void CommandHandler::update() {
         }
       }
       break;
-      
-    case 1: // Knob Controller
+
+    case 1:  // Knob Controller
       if (knobController && knobController->getHasNewMessage()) {
         hasNewMessage = true;
         String knobCommand = knobController->getReceivedCommand();
         processKnobCommand(knobCommand);
       }
       break;
-      
-    case 2: // TCP Client
+
+    case 2:  // TCP Client
       if (tcpClient && tcpClient->getHasNewMessage()) {
         hasNewMessage = true;
         String tcpCommand = tcpClient->getMessage();
@@ -122,7 +122,7 @@ void CommandHandler::update() {
       }
       break;
   }
-  
+
   // Move to next source for next cycle
   sourceIndex = (sourceIndex + 1) % 3;
 }
@@ -538,21 +538,21 @@ void CommandHandler::cmdConfigureStaticIP(const String& params) {
   int secondColon = params.indexOf(':', firstColon + 1);
   int thirdColon = params.indexOf(':', secondColon + 1);
   int fourthColon = params.indexOf(':', thirdColon + 1);
-  
+
   if (firstColon == -1 || secondColon == -1 || thirdColon == -1) {
     String errorMsg = "[Error] Invalid format! Use: configureStaticIP:IP:Gateway:Subnet:DNS1:DNS2";
     Serial.println(errorMsg);
     sendTCPResponse(errorMsg);
     return;
   }
-  
+
   String ip = params.substring(0, firstColon);
   String gateway = params.substring(firstColon + 1, secondColon);
   String subnet = params.substring(secondColon + 1, thirdColon);
-  
-  String dns1 = "8.8.8.8"; // Default primary DNS
-  String dns2 = "8.8.4.4"; // Default secondary DNS
-  
+
+  String dns1 = "8.8.8.8";  // Default primary DNS
+  String dns2 = "8.8.4.4";  // Default secondary DNS
+
   if (thirdColon != -1) {
     if (fourthColon != -1) {
       dns1 = params.substring(thirdColon + 1, fourthColon);
@@ -561,28 +561,26 @@ void CommandHandler::cmdConfigureStaticIP(const String& params) {
       dns1 = params.substring(thirdColon + 1);
     }
   }
-  
+
   // Validate IP addresses
   IPAddress ipAddr, gwAddr, subnetAddr, dns1Addr, dns2Addr;
-  if (!ipAddr.fromString(ip) || !gwAddr.fromString(gateway) || 
-      !subnetAddr.fromString(subnet) || !dns1Addr.fromString(dns1) || 
-      !dns2Addr.fromString(dns2)) {
+  if (!ipAddr.fromString(ip) || !gwAddr.fromString(gateway) || !subnetAddr.fromString(subnet) || !dns1Addr.fromString(dns1) || !dns2Addr.fromString(dns2)) {
     String errorMsg = "[Error] Invalid IP address format!";
     Serial.println(errorMsg);
     sendTCPResponse(errorMsg);
     return;
   }
-  
+
   // Save to EEPROM
   eepromManager->saveStaticIPConfig(true, ip, gateway, subnet, dns1, dns2);
-  
+
   // Apply configuration to TCPHandler via WiFiTCPClient
   if (tcpClient) {
     // The TCP client will apply the configuration to TCPHandler
     String successMsg = "[Config] Static IP configuration saved and will be applied on next restart";
     Serial.println(successMsg);
     sendTCPResponse(successMsg);
-    
+
     // Send configuration details
     sendTCPResponse("  IP: " + ip);
     sendTCPResponse("  Gateway: " + gateway);
@@ -605,9 +603,8 @@ void CommandHandler::cmdEnableStaticIP(const String& params) {
     eepromManager->staticGateway,
     eepromManager->staticSubnet,
     eepromManager->staticDNS1,
-    eepromManager->staticDNS2
-  );
-  
+    eepromManager->staticDNS2);
+
   String successMsg = "[Config] Static IP enabled. Configuration will be applied on next restart.";
   Serial.println(successMsg);
   sendTCPResponse(successMsg);
@@ -622,9 +619,8 @@ void CommandHandler::cmdDisableStaticIP(const String& params) {
     eepromManager->staticGateway,
     eepromManager->staticSubnet,
     eepromManager->staticDNS1,
-    eepromManager->staticDNS2
-  );
-  
+    eepromManager->staticDNS2);
+
   String successMsg = "[Config] Static IP disabled. DHCP will be used on next restart.";
   Serial.println(successMsg);
   sendTCPResponse(successMsg);
@@ -634,7 +630,7 @@ void CommandHandler::cmdShowStaticIP(const String& params) {
   // Display static IP configuration
   String info = eepromManager->getStaticIPInfo();
   Serial.println(info);
-  
+
   // Split the info into lines for TCP response
   int startPos = 0;
   int endPos = info.indexOf('\n');
@@ -662,10 +658,10 @@ void CommandHandler::cmdGetEEPROMValue(const String& params) {
     sendTCPResponse("[Error] No key specified");
     return;
   }
-  
+
   // Example implementation - in a real implementation, you would retrieve the value from EEPROM
   String value = "";
-  
+
   // Check for known configuration values
   if (params == "deviceName") {
     value = eepromManager->deviceName;
@@ -687,7 +683,7 @@ void CommandHandler::cmdGetEEPROMValue(const String& params) {
     sendTCPResponse("[Error] Unknown key: " + params);
     return;
   }
-  
+
   String response = params + "=" + value;
   Serial.println(response);
   sendTCPResponse(response);
@@ -701,13 +697,13 @@ void CommandHandler::cmdSetEEPROMValue(const String& params) {
     sendTCPResponse("[Error] Invalid format! Use: setEEPROMValue:key:value");
     return;
   }
-  
+
   String key = params.substring(0, colonPos);
   String value = params.substring(colonPos + 1);
-  
+
   // Set value based on the key
   bool success = false;
-  
+
   // Check for known configuration values
   if (key == "deviceName") {
     eepromManager->saveDeviceName(value);
@@ -715,21 +711,19 @@ void CommandHandler::cmdSetEEPROMValue(const String& params) {
   } else if (key == "soundMQTTURL") {
     // Save but maintain other values
     eepromManager->saveSoundMQTTServer(
-      value, 
-      eepromManager->soundMQTTServerPort, 
-      eepromManager->soundMQTTUsername, 
-      eepromManager->soundMQTTPassword
-    );
+      value,
+      eepromManager->soundMQTTServerPort,
+      eepromManager->soundMQTTUsername,
+      eepromManager->soundMQTTPassword);
     success = true;
   } else if (key == "soundMQTTPort") {
     int port = value.toInt();
     if (port > 0 && port <= 65535) {
       eepromManager->saveSoundMQTTServer(
-        eepromManager->soundMQTTServerURL, 
-        port, 
-        eepromManager->soundMQTTUsername, 
-        eepromManager->soundMQTTPassword
-      );
+        eepromManager->soundMQTTServerURL,
+        port,
+        eepromManager->soundMQTTUsername,
+        eepromManager->soundMQTTPassword);
       success = true;
     } else {
       Serial.println("[Error] Invalid port value. Must be between 1 and 65535.");
@@ -741,7 +735,7 @@ void CommandHandler::cmdSetEEPROMValue(const String& params) {
     sendTCPResponse("[Error] Unknown key: " + key);
     return;
   }
-  
+
   if (success) {
     String response = "Value saved: " + key + "=" + value;
     Serial.println(response);
@@ -752,11 +746,11 @@ void CommandHandler::cmdSetEEPROMValue(const String& params) {
 void CommandHandler::cmdListEEPROMValues(const String& params) {
   // List all values in EEPROM
   Serial.println("\n=== EEPROM Configuration Values ===");
-  
+
   // Device information
   Serial.println("deviceName=" + eepromManager->deviceName);
   sendTCPResponse("deviceName=" + eepromManager->deviceName);
-  
+
   // WiFi networks
   for (int i = 0; i < 3; i++) {
     if (eepromManager->wifiCredentials[i].ssid.length() > 0) {
@@ -767,11 +761,11 @@ void CommandHandler::cmdListEEPROMValues(const String& params) {
       sendTCPResponse("wifi" + String(i) + "_password=********");
     }
   }
-  
+
   // Last connected network
   Serial.println("lastConnectedNetwork=" + String(eepromManager->lastConnectedNetworkIndex));
   sendTCPResponse("lastConnectedNetwork=" + String(eepromManager->lastConnectedNetworkIndex));
-  
+
   // MQTT configurations
   Serial.println("soundMQTTURL=" + eepromManager->soundMQTTServerURL);
   sendTCPResponse("soundMQTTURL=" + eepromManager->soundMQTTServerURL);
@@ -782,7 +776,7 @@ void CommandHandler::cmdListEEPROMValues(const String& params) {
   // Don't expose passwords
   Serial.println("soundMQTTPassword=********");
   sendTCPResponse("soundMQTTPassword=********");
-  
+
   Serial.println("lightMQTTURL=" + eepromManager->lightMQTTServerURL);
   sendTCPResponse("lightMQTTURL=" + eepromManager->lightMQTTServerURL);
   Serial.println("lightMQTTPort=" + String(eepromManager->lightMQTTServerPort));
@@ -792,7 +786,7 @@ void CommandHandler::cmdListEEPROMValues(const String& params) {
   // Don't expose passwords
   Serial.println("lightMQTTPassword=********");
   sendTCPResponse("lightMQTTPassword=********");
-  
+
   // Static IP configuration
   Serial.println("staticIPEnabled=" + String(eepromManager->staticIPEnabled ? "Yes" : "No"));
   sendTCPResponse("staticIPEnabled=" + String(eepromManager->staticIPEnabled ? "Yes" : "No"));
@@ -802,6 +796,13 @@ void CommandHandler::cmdListEEPROMValues(const String& params) {
   sendTCPResponse("staticGateway=" + eepromManager->staticGateway);
   Serial.println("staticSubnet=" + eepromManager->staticSubnet);
   sendTCPResponse("staticSubnet=" + eepromManager->staticSubnet);
-  
+
   Serial.println("=== End of EEPROM Values ===");
+}
+
+void CommandHandler::cmdGetDeviceName(const String& params) {
+  // Return the device name
+  String deviceName = eepromManager->deviceName;
+  Serial.println(deviceName);
+  sendTCPResponse(deviceName);
 }

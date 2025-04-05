@@ -16,9 +16,12 @@ from config_handler import ConfigHandler  # Import the new config handler
 SENDER_ID = "QNOB"
 
 class QNOBApp:
-    """Main application class for QNOB Control System"""
+
     
     def __init__(self, root):
+        """Main application class for QNOB Control System"""
+        self.device_name = "Unknown"
+        self.port_name = ""
         self.root = root
         self.root.title("QNOB Control System")
         self.root.geometry("900x650")
@@ -104,18 +107,17 @@ class QNOBApp:
         self.status_label = ttk.Label(self.status_frame, text="Ready")
         self.status_label.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
     
-    def update_connection_status(self):
-        """Update the connection status in the status bar"""
-        if self.serial_connected:
-            self.connection_label.config(text="Connected via Serial", foreground="green")
-            self.notebook.tab(2, state="normal")  # Enable Configure tab
-        elif self.tcp_connected:
-            self.connection_label.config(text="Connected via TCP", foreground="green")
-            self.notebook.tab(2, state="normal")  # Enable Configure tab
-        else:
-            self.connection_label.config(text="Not Connected", foreground="red")
-            self.notebook.tab(2, state="disabled")  # Disable Configure tab
-            
+def update_connection_status(self):
+    """Update the connection status in the status bar"""
+    if self.serial_connected:
+        self.connection_label.config(text=f"Connected to {self.device_name} on {self.port_name}", foreground="green")
+        self.notebook.tab(2, state="normal")  # Enable Configure tab
+    elif self.tcp_connected:
+        self.connection_label.config(text="Connected via TCP", foreground="green")
+        self.notebook.tab(2, state="normal")  # Enable Configure tab
+    else:
+        self.connection_label.config(text="Not Connected", foreground="red")
+        self.notebook.tab(2, state="disabled")  # Disable Configure tab
     def update_status(self, message):
         """Update the status message in the status bar"""
         self.status_label.config(text=message)

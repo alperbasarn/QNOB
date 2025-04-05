@@ -80,15 +80,50 @@ class SerialSubTab:
             
             self.serial_port = serial.Serial(port, baud, timeout=0.1)
             
+            # Query device name with timeout
+            self.terminal.log_message("Querying device name...", "status")
+            self.serial_port.write("getDeviceName\n".encode())
+            
+            # Wait for response with 1 second timeout
+            device_name = None
+            start_time = time.time()
+            while time.time() - start_time < 1.0:
+                if self.serial_port.in_waiting:
+                    # Read raw bytes
+                    raw_data = self.serial_port.readline()
+                    
+                    # Try to decode with error handling
+                    try:
+                        response = raw_data.decode('utf-8', errors='replace').strip()
+                    except UnicodeDecodeError:
+                        # If still failing, try to decode as latin-1 (which accepts any byte)
+                        response = raw_data.decode('latin-1').strip()
+                    
+                    if response:
+                        # Save the first non-empty response as device name
+                        # Ignore error messages that start with [
+                        if not response.startswith("["):
+                            device_name = response
+                            break
+                time.sleep(0.05)
+            
+            # Check if we got a device name
+            if not device_name:
+                self.terminal.log_message("No response from device, connection failed", "error")
+                self.serial_port.close()
+                return
+                
             # Update UI
             self.connect_btn.config(state=tk.DISABLED)
             self.disconnect_btn.config(state=tk.NORMAL)
             self.terminal.send_btn.config(state=tk.NORMAL)
             
-            # Update app's connection status
+            # Update app's connection status with device name and port
             self.app.serial_connected = True
             self.app.connected_device = self.serial_port
             self.app.connection_type = "serial"
+            self.app.device_name = device_name
+            self.app.port_name = port
             self.app.update_connection_status()
             
             # Start reader thread
@@ -96,11 +131,10 @@ class SerialSubTab:
             self.reader_thread = threading.Thread(target=self.read_serial, daemon=True)
             self.reader_thread.start()
             
-            self.terminal.log_message(f"Connected to {port} at {baud} baud", "status")
+            self.terminal.log_message(f"Connected to {device_name} on {port} at {baud} baud", "status")
         
         except Exception as e:
             self.terminal.log_message(f"Serial connection error: {str(e)}", "error")
-    
     def disconnect_serial(self):
         """Disconnect from the serial port"""
         if self.serial_port and self.serial_port.is_open:
@@ -131,7 +165,16 @@ class SerialSubTab:
             try:
                 # Read data if available
                 if self.serial_port.in_waiting:
-                    data = self.serial_port.readline().decode('utf-8').strip()
+                    # Read raw bytes
+                    raw_data = self.serial_port.readline()
+                    
+                    # Try to decode with error handling
+                    try:
+                        data = raw_data.decode('utf-8', errors='replace').strip()
+                    except UnicodeDecodeError:
+                        # If still failing, try to decode as latin-1 (which accepts any byte)
+                        data = raw_data.decode('latin-1').strip()
+                    
                     if data:
                         # Process the received data
                         self.terminal.log_message(data, "serial_received")
