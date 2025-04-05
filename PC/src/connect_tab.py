@@ -39,7 +39,7 @@ class ConnectTab:
             "mqtt": self.mqtt_tab.terminal
         }
     
-    def log_message(self, message, message_type="status"):
+    def log_message(self, message, message_type="status", is_self=False):
         """Log message to appropriate terminal based on type"""
         # Determine which terminal to use based on message type prefix or connection type
         if message_type.startswith("serial") or (message_type in ["sent", "received"] and self.app.connection_type == "serial"):
@@ -61,8 +61,8 @@ class ConnectTab:
         elif message_type.startswith("mqtt") or message_type == "received":
             terminal = self.mqtt_tab.terminal
             
-            # Handle MQTT filtering
-            if "sender=" in message and self.mqtt_tab.filter_self_messages.get() and message_type == "mqtt_received":
+            # Only filter if it's a self-message AND filtering is enabled
+            if is_self and self.mqtt_tab.filter_self_messages.get() and message_type == "mqtt_received":
                 # Skip self-messages if filtering is enabled
                 return
                 

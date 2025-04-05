@@ -218,8 +218,7 @@ class MQTTSubTab:
                 self.disconnect_btn.config(state=tk.NORMAL)
                 self.terminal.send_btn.config(state=tk.NORMAL)
                 
-                # Log connection
-                self.terminal.log_message("Connected to MQTT broker", "status")
+                # Removed duplicate log message
             else:
                 self.terminal.log_message("Failed to connect to MQTT broker", "error")
     

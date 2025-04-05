@@ -131,9 +131,12 @@ class MQTTHandler:
         except UnicodeDecodeError:
             payload = f"Binary data ({len(msg.payload)} bytes)"
         
+        # Check if message is from ourselves (but don't filter it out)
+        is_self_message = f"sender={self.client_id}" in payload
+        
         if self.message_callback:
-            # Only send with mqtt_received type to prevent duplication
-            self.message_callback(f"Received [{topic}]: {payload}", "mqtt_received")
+            # Pass is_self flag to the callback
+            self.message_callback(f"Received [{topic}]: {payload}", "mqtt_received", is_self=is_self_message)
         
         # Handle state request message
         if topic == "esp32/sound/get_state" and "request" in payload:
@@ -166,12 +169,8 @@ class MQTTHandler:
                     # Send default response
                     self.publish("esp32/sound/response", "state:paused,volume:50")
         
-        # Process commands from the ESP32
-        elif topic == "esp32/sound/control":
-            # Check if the message is from ourselves to avoid feedback loops
-            if f"sender={self.client_id}" in payload:
-                return
-                
+        # Process commands from the ESP32 - Only if not from ourselves
+        elif topic == "esp32/sound/control" and not is_self_message:
             # Extract the actual command (remove sender part if present)
             command = payload
             if "," in payload:
@@ -227,12 +226,8 @@ class MQTTHandler:
                     if self.message_callback:
                         self.message_callback("Media control: rewind", "status")
         
-        # Process setpoint messages
-        elif topic == "esp32/sound/setpoint" and "setpoint:" in payload:
-            # Check if the message is from ourselves to avoid feedback loops
-            if f"sender={self.client_id}" in payload:
-                return
-                
+        # Process setpoint messages - Only if not from ourselves
+        elif topic == "esp32/sound/setpoint" and "setpoint:" in payload and not is_self_message:
             # Extract the setpoint value
             try:
                 setpoint_str = payload.split("setpoint:")[1].split(",")[0].strip()
