@@ -174,7 +174,7 @@ class SerialSubTab:
                     except UnicodeDecodeError:
                         # If still failing, try to decode as latin-1 (which accepts any byte)
                         data = raw_data.decode('latin-1').strip()
-                    
+                
                     if data:
                         # Process the received data
                         self.terminal.log_message(data, "serial_received")

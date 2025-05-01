@@ -84,4 +84,8 @@ class ConnectTab:
                 terminal = self.serial_tab.terminal
         
         # Log the message using the terminal's method
-        terminal.log_message(message, message_type)
+        try:
+            terminal.log_message(message, message_type, is_self=is_self)
+        except Exception as e:
+            # If there's an error with the terminal's log_message, use a simpler fallback
+            print(f"Error logging message: {e}")

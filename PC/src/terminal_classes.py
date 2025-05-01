@@ -133,9 +133,13 @@ class CommTerminal:
     def send_command(self, event=None):
         """Base method for sending commands - to be overridden by subclasses"""
         raise NotImplementedError("Subclasses must implement send_command")
-    
-    def log_message(self, message, message_type="status"):
+        
+    def log_message(self, message, message_type="status", is_self=False):
         """Log a message to the appropriate text area"""
+        # Add a visual indicator for self-messages
+        if is_self and message_type == "mqtt_received":
+            message = f"[SELF] {message}"
+            
         # Format message with timestamp if enabled
         if self.show_timestamps.get():
             timestamp = time.strftime("%H:%M:%S")

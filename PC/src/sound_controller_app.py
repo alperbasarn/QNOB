@@ -141,7 +141,62 @@ class QNOBApp:
     def handle_message(self, message, message_type="status", is_self=False):
         """Central message handler for all tabs"""
         try:
-            # Log all messages to Connect tab if it exists
+            # Special message types for MQTT status updates
+            if message_type == "mqtt_connected":
+                if hasattr(self, 'sound_tab'):
+                    self.sound_tab.update_mqtt_status(True, message)
+                return
+            elif message_type == "mqtt_disconnected":
+                if hasattr(self, 'sound_tab'):
+                    self.sound_tab.update_mqtt_status(False)
+                return
+            elif message_type == "mqtt_control":
+                # Process media command
+                if message == "play":
+                    if hasattr(self, 'media_controller'):
+                        is_playing = self.media_controller.play_pause()
+                        if hasattr(self, 'sound_tab'):
+                            self.sound_tab.update_playing_state(is_playing)
+                        if hasattr(self, 'mqtt_handler'):
+                            state = "playing" if is_playing else "paused"
+                            self.mqtt_handler.publish("esp32/sound/response", state)
+                elif message == "pause":
+                    if hasattr(self, 'media_controller'):
+                        is_playing = self.media_controller.play_pause()
+                        if hasattr(self, 'sound_tab'):
+                            self.sound_tab.update_playing_state(is_playing)
+                        if hasattr(self, 'mqtt_handler'):
+                            state = "playing" if is_playing else "paused"
+                            self.mqtt_handler.publish("esp32/sound/response", state)
+                elif message == "forward":
+                    if hasattr(self, 'media_controller'):
+                        self.media_controller.next_track()
+                elif message == "rewind":
+                    if hasattr(self, 'media_controller'):
+                        self.media_controller.prev_track()
+                return
+            elif message_type == "mqtt_setpoint":
+                # Process setpoint
+                try:
+                    setpoint = int(message)
+                    if hasattr(self, 'audio_controller'):
+                        self.audio_controller.set_volume_percent(setpoint)
+                    if hasattr(self, 'sound_tab'):
+                        self.sound_tab.update_volume(setpoint, send_to_device=False)
+                except:
+                    pass
+                return
+            elif message_type == "mqtt_get_state":
+                # Send state
+                if hasattr(self, 'audio_controller') and hasattr(self, 'media_controller'):
+                    volume = self.audio_controller.get_volume_percent()
+                    is_playing = self.media_controller.get_playing_state()
+                    state = "playing" if is_playing else "paused"
+                    if hasattr(self, 'mqtt_handler'):
+                        self.mqtt_handler.publish("esp32/sound/response", f"state:{state},volume:{volume}")
+                return
+                
+            # Regular message handling
             if hasattr(self, 'connect_tab'):
                 self.connect_tab.log_message(message, message_type, is_self)
             
@@ -154,33 +209,6 @@ class QNOBApp:
                 self.process_received_command(message)
         except Exception as e:
             print(f"Error in handle_message: {e}")
-    
-    def send_command(self, command):
-        """Send command to the connected device"""
-        if not self.serial_connected and not self.tcp_connected:
-            self.handle_message("Cannot send command: Not connected", "error")
-            return False
-            
-        try:
-            if self.serial_connected:
-                # Add newline if not already there
-                if not command.endswith('\n'):
-                    command += '\n'
-                self.connected_device.write(command.encode())
-                self.handle_message(f"Sent: {command.strip()}", "sent")
-                return True
-                
-            elif self.tcp_connected:
-                # Add newline if not already there
-                if not command.endswith('\n'):
-                    command += '\n'
-                self.connected_device.send(command.encode())
-                self.handle_message(f"Sent: {command.strip()}", "sent")
-                return True
-                
-        except Exception as e:
-            self.handle_message(f"Send error: {str(e)}", "error")
-            return False
             
     def process_received_command(self, message):
         """Process commands received from the device"""

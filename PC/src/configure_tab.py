@@ -195,7 +195,7 @@ class ConfigureTab:
                     widget.set(value)
                 else:
                     widget.current(0)
-            else:
+            else: 
                 # Standard string field
                 widget.var.set(value)
             

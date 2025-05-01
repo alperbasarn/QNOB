@@ -235,11 +235,15 @@ class MQTTSubTab:
             
             # Log disconnection
             self.terminal.log_message("Disconnected from MQTT broker", "status")
-    
+            
     def toggle_filter(self):
         """Called when filter checkbox is toggled"""
-        # Just record the current filter state without trying to refresh messages
-        self.filter_self_messages.set(self.filter_self_messages.get())
+        # Force an update in case there are already received messages shown/hidden
+        filter_state = self.filter_self_messages.get()
+        self.terminal.log_message(
+            f"Self-message filtering {'enabled' if filter_state else 'disabled'}", 
+            "status"
+        )
     
     def update_mqtt_status(self, connected, broker=""):
         """Update MQTT connection status display"""

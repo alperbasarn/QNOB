@@ -1,0 +1,1259 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237")
+	(paper "A4")
+	(title_block
+		(title "QNOB")
+		(date "2025-04-17")
+		(rev "0.5")
+		(company "12M Design")
+		(comment 1 "Alper Basaran")
+	)
+	(lib_symbols
+		(symbol "power:VDD"
+			(power)
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "#PWR"
+				(at 0 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Value" "VDD"
+				(at 0 3.556 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Power symbol creates a global label with name \"VDD\""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "global power"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "VDD_0_1"
+				(polyline
+					(pts
+						(xy -0.762 1.27) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0.762 1.27)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "VDD_1_1"
+				(pin power_in line
+					(at 0 0 90)
+					(length 0)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+	)
+	(text "Encoder power selector"
+		(exclude_from_sim no)
+		(at 60.452 85.09 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "968124d7-0ba1-480e-a831-9dade52cfb9e")
+	)
+	(text "Encoder mode selector"
+		(exclude_from_sim no)
+		(at 59.182 133.096 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "c5a336d4-296a-48fe-8858-8ee865e1f1d9")
+	)
+	(junction
+		(at 76.2 59.69)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "cb96ffb9-c76c-463c-a425-c9970bfb217c")
+	)
+	(wire
+		(pts
+			(xy 67.31 119.38) (xy 66.04 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0667fb67-ff46-44ab-ae56-738a8f221bf3")
+	)
+	(wire
+		(pts
+			(xy 77.47 60.96) (xy 76.2 59.69)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1673880e-72f9-4250-a174-c8a62599eccd")
+	)
+	(wire
+		(pts
+			(xy 81.28 73.66) (xy 76.2 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "33bf0073-d7c2-401e-a0bf-2480f5f6a3f7")
+	)
+	(wire
+		(pts
+			(xy 63.5 120.65) (xy 66.04 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3dfb3900-0762-48c5-b6e5-8040607e4d4f")
+	)
+	(wire
+		(pts
+			(xy 78.74 124.46) (xy 77.47 123.19)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4b023ee5-1a94-4d78-90ac-ac806417d0e6")
+	)
+	(wire
+		(pts
+			(xy 63.5 97.79) (xy 83.82 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "81c66692-7978-45b2-9f4e-d40a94b8b51f")
+	)
+	(wire
+		(pts
+			(xy 83.82 124.46) (xy 78.74 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "915ad2a8-eba6-43a4-b7de-2a8a1e2e86db")
+	)
+	(wire
+		(pts
+			(xy 76.2 58.42) (xy 76.2 59.69)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b04d367f-ffeb-482c-9b25-af2f3f79323b")
+	)
+	(wire
+		(pts
+			(xy 77.47 110.49) (xy 83.82 110.49)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b226c6fc-8ae2-4d8d-8cd3-7df3b2ba7bfd")
+	)
+	(wire
+		(pts
+			(xy 77.47 110.49) (xy 76.2 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ccd3ff06-efb2-4bfe-90d7-7fb6a3234999")
+	)
+	(wire
+		(pts
+			(xy 83.82 60.96) (xy 77.47 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d22b0975-4b01-44a2-9860-e757223b5c8b")
+	)
+	(wire
+		(pts
+			(xy 76.2 59.69) (xy 76.2 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d72bda3b-bbea-4fa7-bf43-1f60182391bc")
+	)
+	(wire
+		(pts
+			(xy 71.12 100.33) (xy 83.82 100.33)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d922f031-c6b3-49f8-b64d-554bcfd09a85")
+	)
+	(wire
+		(pts
+			(xy 83.82 73.66) (xy 81.28 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f2c00613-c819-49cd-8390-3c97b376030c")
+	)
+	(wire
+		(pts
+			(xy 67.31 104.14) (xy 71.12 100.33)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f6feadfe-bbf5-4698-b76e-d68302993997")
+	)
+	(wire
+		(pts
+			(xy 67.31 104.14) (xy 67.31 119.38)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fadd62ca-1a8d-44ab-bc71-01f5ff108c6b")
+	)
+	(label "GPIO21"
+		(at 102.87 113.03 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "130e7e23-a62c-41f4-9283-574c373475b2")
+	)
+	(label "GPIO6"
+		(at 102.87 81.28 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "20e4c7ea-a2f6-4e8d-bc63-85ec29fc4583")
+	)
+	(label "GPIO1"
+		(at 102.87 115.57 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "449e0d86-1c3d-4226-93d1-db121a5308e0")
+	)
+	(label "GPIO8"
+		(at 102.87 76.2 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "4cfedf96-4380-418c-ba71-096d624e5b42")
+	)
+	(label "GPIO21"
+		(at 102.87 99.06 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "65da5111-9ce8-43c6-86bc-a1c91a4c88d5")
+	)
+	(label "GPIO20"
+		(at 102.87 96.52 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "7ca0f3ed-8abe-4f23-af8b-d3b95aec49a2")
+	)
+	(label "GPIO21"
+		(at 102.87 127 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "7d8fcd7a-a06a-46d6-91eb-a0eb0e8d3bb7")
+	)
+	(label "GPIO9"
+		(at 106.68 55.88 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "99b12056-e600-4c84-908c-54a567940f94")
+	)
+	(label "GPIO7"
+		(at 102.87 78.74 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "a0939310-10dd-43e2-af0d-3281e0d764e6")
+	)
+	(label "LED_CTRL"
+		(at 106.68 66.04 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "a646a16d-442a-4292-91bb-c9de48bf6c89")
+	)
+	(label "DRV8311_3v3"
+		(at 83.82 76.2 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "abe1de9c-224f-40e3-b37c-0b1cc0005382")
+	)
+	(label "ENC_POWER"
+		(at 66.04 97.79 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "acea2d81-6058-4111-b0d3-afd56aff9bf3")
+	)
+	(label "GPIO5"
+		(at 102.87 73.66 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "c981f49a-0755-4703-a629-88417e844584")
+	)
+	(label "GPIO20"
+		(at 102.87 124.46 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "cb12b312-e258-4d40-81a7-a506234b083e")
+	)
+	(label "GPIO20"
+		(at 102.87 110.49 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "eab7c9ef-32b5-4c61-9267-2d0c5a3a6573")
+	)
+	(symbol
+		(lib_id "power:VDD")
+		(at 77.47 123.19 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "3e0c062e-0599-4433-80ec-bedb64af68c7")
+		(property "Reference" "#PWR05"
+			(at 77.47 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "VSYS_PROTECTED"
+			(at 77.47 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 77.47 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 77.47 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VDD\""
+			(at 77.47 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "d5edb190-b3cc-4300-83bf-57ec9d162ad2")
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(reference "#PWR05")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:VDD")
+		(at 59.69 102.87 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "5eedf22a-a977-46a1-9701-51f8f7a2c0e6")
+		(property "Reference" "#PWR02"
+			(at 59.69 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "DRV8311_3v3"
+			(at 59.69 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 59.69 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 59.69 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VDD\""
+			(at 59.69 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "03a017ee-4df7-4d60-9a09-aa1013f2b2c1")
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(reference "#PWR02")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:VDD")
+		(at 76.2 58.42 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "770f3f8e-46f7-48c5-8ca5-1da562076c4f")
+		(property "Reference" "#PWR03"
+			(at 76.2 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "VSYS_PROTECTED"
+			(at 76.2 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 76.2 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 76.2 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VDD\""
+			(at 76.2 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "388e5cd6-1813-49d1-99f1-ae8d142bb731")
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(reference "#PWR03")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:VDD")
+		(at 59.69 92.71 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "bd77c869-94f0-408b-9fc3-96c1eac822e2")
+		(property "Reference" "#PWR01"
+			(at 59.69 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "VSYS_PROTECTED"
+			(at 59.69 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 59.69 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 59.69 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VDD\""
+			(at 59.69 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "885d4b53-1851-42c5-9f7c-46b61010b708")
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(reference "#PWR01")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:VDD")
+		(at 76.2 109.22 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d28d5ac0-0e1c-4cd2-823e-86364259a66f")
+		(property "Reference" "#PWR04"
+			(at 76.2 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "3V3_Protected"
+			(at 76.2 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 76.2 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 76.2 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VDD\""
+			(at 76.2 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "a6187fbd-3852-4647-bd94-f781221ad5b4")
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(reference "#PWR04")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(sheet
+		(at 83.82 71.12)
+		(size 19.05 19.05)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "0325851d-928d-423f-9746-0b28762f6ff3")
+		(property "Sheetname" "Motor drive"
+			(at 83.82 70.4084 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "MotorDrive.kicad_sch"
+			(at 83.82 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Field2" ""
+			(at 83.82 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "IN_A" input
+			(at 102.87 76.2 0)
+			(uuid "9f19be7b-5e02-4250-882d-09e77c6d77c2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "IN_B" input
+			(at 102.87 78.74 0)
+			(uuid "4e000664-e235-4ca0-a058-0a0837cb7de3")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "EN" input
+			(at 102.87 73.66 0)
+			(uuid "1a38d209-a0c8-4033-9c0e-7971844ef8de")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "Vin" input
+			(at 83.82 73.66 180)
+			(uuid "aeaa972f-e94d-4ff5-ac21-d1733a13cb19")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "IN_C" input
+			(at 102.87 81.28 0)
+			(uuid "e542fe2e-19a6-4d8c-b505-7ae007601d4f")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "3v3Out" output
+			(at 83.82 76.2 180)
+			(uuid "2c9d615c-15f6-4443-afb0-84f91a60891b")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 83.82 107.95)
+		(size 19.05 8.89)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "49f6a4c7-ead1-4254-bdd5-a2c6a6e178ff")
+		(property "Sheetname" "sensors"
+			(at 83.82 107.2384 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "sensors.kicad_sch"
+			(at 83.82 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "3v3_in" input
+			(at 83.82 110.49 180)
+			(uuid "ffae523d-4154-493f-8047-321d5e4ab8f2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "SCL" input
+			(at 102.87 110.49 0)
+			(uuid "f4a66018-3816-404b-aca0-b4b7a34d5288")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "SDA" input
+			(at 102.87 113.03 0)
+			(uuid "5593f7b4-359e-43ab-9123-8acc7c9eb4e0")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "INT" input
+			(at 102.87 115.57 0)
+			(uuid "51fac42f-d897-4eef-8a17-0f3210837edd")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 83.82 95.25)
+		(size 19.05 7.62)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "52112096-a663-485a-a56f-c71b1858655b")
+		(property "Sheetname" "encoder"
+			(at 83.566 94.742 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "encoder_sch.kicad_sch"
+			(at 83.566 91.5166 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "SDA" bidirectional
+			(at 102.87 99.06 0)
+			(uuid "be2f5d17-440d-4853-bb76-d5c58c0c5763")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "SCL" bidirectional
+			(at 102.87 96.52 0)
+			(uuid "48daefc2-bf2f-45cd-9a7f-eeff4414579d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "Vin" input
+			(at 83.82 97.79 180)
+			(uuid "e7d03784-5dfd-45b9-b73a-949a26477222")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "MODE" input
+			(at 83.82 100.33 180)
+			(uuid "b104716f-690f-436e-a0c6-c938d8028c68")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 83.82 121.92)
+		(size 19.05 7.62)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "6651140a-31d2-45ad-994d-20ec21025bd6")
+		(property "Sheetname" "RTC"
+			(at 83.82 121.2084 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "RTC.kicad_sch"
+			(at 83.82 130.1246 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "5Vin" input
+			(at 83.82 124.46 180)
+			(uuid "47b639d1-f18f-4a2e-aa9c-7dedee0e7d60")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "SCL" input
+			(at 102.87 124.46 0)
+			(uuid "0d02d9bb-8526-4462-af5f-2fe259cbd088")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "SDA" input
+			(at 102.87 127 0)
+			(uuid "430426da-8fde-447b-b331-f8ee1af777f4")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 83.82 58.42)
+		(size 19.05 5.08)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "8f25d368-d4dd-4ec2-8874-065890635be0")
+		(property "Sheetname" "leds"
+			(at 83.82 56.896 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "leds.kicad_sch"
+			(at 84.074 53.594 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "LED_5V" input
+			(at 83.82 60.96 180)
+			(uuid "870f2eb1-3809-4d23-8894-6b00500fb8a9")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "LED_Din" input
+			(at 102.87 60.96 0)
+			(uuid "2317dd5d-a748-491a-8d8d-e1006f2def16")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 49.53 142.24)
+		(size 34.29 36.83)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "e7b80edc-3366-4761-94f8-d535c3f95cc3")
+		(property "Sheetname" "Connectors"
+			(at 49.53 141.5284 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Connectors.kicad_sch"
+			(at 49.53 179.6546 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(page "7")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)
