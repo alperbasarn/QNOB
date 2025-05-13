@@ -751,10 +751,6 @@
     [
       "49f6a4c7-ead1-4254-bdd5-a2c6a6e178ff",
       "sensors"
-    ],
-    [
-      "6651140a-31d2-45ad-994d-20ec21025bd6",
-      "RTC"
     ]
   ],
   "text_variables": {}

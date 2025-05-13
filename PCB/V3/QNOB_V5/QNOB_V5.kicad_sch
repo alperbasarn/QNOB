@@ -1773,16 +1773,6 @@
 		)
 		(uuid "b85f8238-4a7a-4533-a9d2-4d1c96550e71")
 	)
-	(text "Encoder mode selector"
-		(exclude_from_sim no)
-		(at 59.182 133.096 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "c5a336d4-296a-48fe-8858-8ee865e1f1d9")
-	)
 	(junction
 		(at 189.23 59.69)
 		(diameter 0)
@@ -2003,26 +1993,6 @@
 	)
 	(wire
 		(pts
-			(xy 78.74 124.46) (xy 77.47 123.19)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4b023ee5-1a94-4d78-90ac-ac806417d0e6")
-	)
-	(wire
-		(pts
-			(xy 59.69 125.73) (xy 59.69 129.54)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5d23484f-e87b-43ab-9f0a-12ca9a5a5bbe")
-	)
-	(wire
-		(pts
 			(xy 140.97 80.01) (xy 137.16 76.2)
 		)
 		(stroke
@@ -2100,16 +2070,6 @@
 			(type default)
 		)
 		(uuid "8f4c6e5d-1119-46f3-aaa4-6b81bb640387")
-	)
-	(wire
-		(pts
-			(xy 83.82 124.46) (xy 78.74 124.46)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "915ad2a8-eba6-43a4-b7de-2a8a1e2e86db")
 	)
 	(wire
 		(pts
@@ -2442,24 +2402,14 @@
 		(uuid "4cfedf96-4380-418c-ba71-096d624e5b42")
 	)
 	(label "ENC_POWER"
-		(at 59.69 129.54 0)
+		(at 63.5 120.65 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify right bottom)
 		)
 		(uuid "4ecbef71-39ee-4d34-b47b-8ee63610bd24")
-	)
-	(label "GPIO9"
-		(at 59.69 115.57 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "4fc4a7f3-2ce8-4dbc-89f7-16f41daf7769")
 	)
 	(label "GPIO21"
 		(at 171.45 102.87 180)
@@ -2510,16 +2460,6 @@
 			(justify left bottom)
 		)
 		(uuid "7ca0f3ed-8abe-4f23-af8b-d3b95aec49a2")
-	)
-	(label "GPIO21"
-		(at 102.87 127 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "7d8fcd7a-a06a-46d6-91eb-a0eb0e8d3bb7")
 	)
 	(label "GPIO9"
 		(at 106.68 55.88 90)
@@ -2640,16 +2580,6 @@
 			(justify right bottom)
 		)
 		(uuid "ca5b1e98-eab0-44e5-8eca-b481b403d13b")
-	)
-	(label "GPIO20"
-		(at 102.87 124.46 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "cb12b312-e258-4d40-81a7-a506234b083e")
 	)
 	(label "GPIO9"
 		(at 152.4 74.93 180)
@@ -3116,6 +3046,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:VDD")
+		(at 63.5 97.79 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "22f83310-42ba-4a66-949a-ede9800c50f8")
+		(property "Reference" "#PWR065"
+			(at 63.5 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "3V3_Protected"
+			(at 63.5 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 63.5 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 63.5 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"VDD\""
+			(at 63.5 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "cb55e2d6-82dc-495c-872e-340a2275681c")
+		)
+		(instances
+			(project "QNOB_V5"
+				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
+					(reference "#PWR065")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R_Small")
 		(at 134.62 72.39 180)
 		(unit 1)
@@ -3337,159 +3333,6 @@
 	)
 	(symbol
 		(lib_id "power:VDD")
-		(at 77.47 123.19 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "3e0c062e-0599-4433-80ec-bedb64af68c7")
-		(property "Reference" "#PWR066"
-			(at 77.47 127 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "VSYS_PROTECTED"
-			(at 77.47 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 77.47 123.19 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 77.47 123.19 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"VDD\""
-			(at 77.47 123.19 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "d5edb190-b3cc-4300-83bf-57ec9d162ad2")
-		)
-		(instances
-			(project "QNOB_V5"
-				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
-					(reference "#PWR066")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Jumper:SolderJumper_3_Open")
-		(at 59.69 120.65 90)
-		(unit 1)
-		(exclude_from_sim yes)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "462d2bc1-5a0a-4eb9-a723-3981935c3d24")
-		(property "Reference" "JP4"
-			(at 53.34 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "SolderJumper_3_Open"
-			(at 55.88 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm"
-			(at 59.69 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 59.69 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Solder Jumper, 3-pole, open"
-			(at 59.69 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey" ""
-			(at 59.69 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price(eur)" ""
-			(at 59.69 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "17f15bfa-2fca-49ae-94a0-620e9245ff30")
-		)
-		(pin "1"
-			(uuid "a18e199b-3e78-4bc4-bd66-c47329250c98")
-		)
-		(pin "3"
-			(uuid "cbad757e-f568-409d-89d3-ddc6ba73052c")
-		)
-		(instances
-			(project "QNOB_V5"
-				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
-					(reference "JP4")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:VDD")
 		(at 137.16 59.69 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -3614,158 +3457,6 @@
 			(project "QNOB_V5"
 				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
 					(reference "#PWR062")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Jumper:SolderJumper_3_Open")
-		(at 59.69 97.79 90)
-		(unit 1)
-		(exclude_from_sim yes)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "5892ec79-5091-4d3e-86b6-f3c9b103c8ab")
-		(property "Reference" "JP2"
-			(at 53.34 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "SolderJumper_3_Open"
-			(at 55.88 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm"
-			(at 59.69 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 59.69 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Solder Jumper, 3-pole, open"
-			(at 59.69 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey" ""
-			(at 59.69 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price(eur)" ""
-			(at 59.69 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "9496fd81-d314-4c32-98f2-a10f6a501310")
-		)
-		(pin "1"
-			(uuid "5979b40e-818f-445d-9be1-ffcde53ee7ee")
-		)
-		(pin "3"
-			(uuid "1db8bda8-0714-4cf4-aecf-e976043fa871")
-		)
-		(instances
-			(project "QNOB_V5"
-				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
-					(reference "JP2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:VDD")
-		(at 59.69 102.87 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "5eedf22a-a977-46a1-9701-51f8f7a2c0e6")
-		(property "Reference" "#PWR059"
-			(at 59.69 99.06 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "DRV8311_3v3"
-			(at 59.69 107.95 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 59.69 102.87 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 59.69 102.87 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"VDD\""
-			(at 59.69 102.87 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "03a017ee-4df7-4d60-9a09-aa1013f2b2c1")
-		)
-		(instances
-			(project "QNOB_V5"
-				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
-					(reference "#PWR059")
 					(unit 1)
 				)
 			)
@@ -4641,72 +4332,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:VDD")
-		(at 59.69 92.71 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "bd77c869-94f0-408b-9fc3-96c1eac822e2")
-		(property "Reference" "#PWR057"
-			(at 59.69 96.52 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "VSYS_PROTECTED"
-			(at 59.69 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 59.69 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 59.69 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"VDD\""
-			(at 59.69 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "885d4b53-1851-42c5-9f7c-46b61010b708")
-		)
-		(instances
-			(project "QNOB_V5"
-				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
-					(reference "#PWR057")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:C_Small")
 		(at 162.56 102.87 180)
 		(unit 1)
@@ -5405,78 +5030,6 @@
 			(project "QNOB_V5"
 				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
 					(page "3")
-				)
-			)
-		)
-	)
-	(sheet
-		(at 83.82 121.92)
-		(size 19.05 7.62)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "6651140a-31d2-45ad-994d-20ec21025bd6")
-		(property "Sheetname" "RTC"
-			(at 83.82 121.2084 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "RTC.kicad_sch"
-			(at 83.82 130.1246 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(pin "5Vin" input
-			(at 83.82 124.46 180)
-			(uuid "47b639d1-f18f-4a2e-aa9c-7dedee0e7d60")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(pin "SCL" input
-			(at 102.87 124.46 0)
-			(uuid "0d02d9bb-8526-4462-af5f-2fe259cbd088")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "SDA" input
-			(at 102.87 127 0)
-			(uuid "430426da-8fde-447b-b331-f8ee1af777f4")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(instances
-			(project "QNOB_V5"
-				(path "/4746b2fa-ccd8-4fe2-a7b3-1d5b8ab30237"
-					(page "6")
 				)
 			)
 		)
