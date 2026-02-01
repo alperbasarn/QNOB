@@ -54,7 +54,27 @@
       "diff_pair_dimensions": [],
       "drc_exclusions": [
         [
-          "starved_thermal|-10100000|-13437500|57f504a9-04b7-4924-8ee3-41a2c4a5a284|5faeb326-0d33-4e90-bd29-a7937604ac23|F.Cu",
+          "lib_footprint_issues|0|12875000|3debd5e5-8e60-4f72-b56b-551e216de543|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|-10500000|-12082500|60ed9e54-c184-4b71-9e53-2680f81f6abe|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|-16500000|-8000000|83695d6c-2e32-4d22-8024-fbea65d55a30|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|-8250000|-15500000|2b5410d6-3883-42bd-be1d-1bf319f5d545|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|-8250000|-17500000|8bd3db84-b05d-4c10-be1a-8377eec47d91|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|16837500|-7500000|4f73d8fc-6262-4d1f-825e-ab34f03bcfbe|00000000-0000-0000-0000-000000000000",
           ""
         ],
         [
@@ -146,7 +166,7 @@
         "min_track_width": 0.0,
         "min_via_annular_width": 0.1,
         "min_via_diameter": 0.5,
-        "solder_mask_to_copper_clearance": 0.0,
+        "solder_mask_to_copper_clearance": 0.005,
         "use_height_for_length_calcs": true
       },
       "teardrop_options": [
@@ -241,6 +261,10 @@
   "erc": {
     "erc_exclusions": [
       [
+        "footprint_link_issues|571500|965200|62862954-d77f-4722-a46a-cc1d91dea131|00000000-0000-0000-0000-000000000000|||",
+        ""
+      ],
+      [
         "pin_not_connected|1574800|774700|948afd7f-42fc-4653-90b2-3bdd1e9b7c27|00000000-0000-0000-0000-000000000000|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|",
         ""
       ],
@@ -277,7 +301,23 @@
         ""
       ],
       [
+        "power_pin_not_driven|431800|596900|0ba10084-d663-4b14-8d65-3f4114777819|00000000-0000-0000-0000-000000000000|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|",
+        ""
+      ],
+      [
+        "power_pin_not_driven|457200|596900|4772581c-0200-4260-8de0-fb984d5e348b|00000000-0000-0000-0000-000000000000|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|",
+        ""
+      ],
+      [
         "power_pin_not_driven|495300|266700|4e86ed63-0c9e-4c5b-9b34-c75220b04735|00000000-0000-0000-0000-000000000000|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|",
+        ""
+      ],
+      [
+        "power_pin_not_driven|508000|596900|1f6fd9a4-91d2-4477-bf08-46099ee7d506|00000000-0000-0000-0000-000000000000|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|",
+        ""
+      ],
+      [
+        "power_pin_not_driven|596900|279400|4e86ed63-0c9e-4c5b-9b34-c75220b04735|00000000-0000-0000-0000-000000000000|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|/04f38e1d-42bd-4802-9ab0-14d3075a48ff|",
         ""
       ]
     ],
@@ -544,7 +584,7 @@
       "plot": "Fabrication/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "Documents/ScreenBase_V2.step",
+      "step": "Documents/ScreenBase_V5.step",
       "svg": "",
       "vrml": ""
     },

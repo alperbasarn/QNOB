@@ -1,0 +1,7 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+"C1, C2",0805,2,10u,
+"C3, C4",0805,2,100n,
+"J1, J2",PinHeader_2x04_P2.54mm_Vertical,2,Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical_SMD,
+"J10, J11, J12, J13, J14, J15, J16, J17, J18, J3, J4, J5, J6, J7, J8, J9",SolderWirePad_1x01_SMD_1x2mm,16,Conn_01x01_Pin,
+S1,speaker_custom,1,Speaker,
+U1,Bosch_LGA-8_3x3mm_P0.8mm_ClockwisePinNumbering,1,BME688,

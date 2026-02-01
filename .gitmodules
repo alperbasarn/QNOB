@@ -1,0 +1,3 @@
+[submodule "screen/SW/components/LovyanGFX"]
+	path = screen/SW/components/LovyanGFX
+	url = https://github.com/lovyan03/LovyanGFX.git
