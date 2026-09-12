@@ -1,1 +1,8 @@
-git rm --cached "*.pyc"
+# Generated / local artifacts (repo-wide)
+__pycache__/
+*.pyc
+NUL
+Thumbs.db
+.DS_Store
+.claude/settings.local.json
+**/.claude/settings.local.json
